@@ -47,7 +47,7 @@ export function Nav() {
   );
 
   return (
-    <header className="sticky top-0 z-40 backdrop-blur-md bg-background/40 border-b border-line">
+    <header className="sticky top-0 z-40 bg-background/85 border-b border-line">
       <div className="mx-auto max-w-6xl px-5 h-14 flex items-center gap-4">
         <div className="flex items-center gap-2 mr-2">
           <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-violet via-amber to-green grid place-items-center text-[11px] font-black text-background">
@@ -96,7 +96,7 @@ export function Toasts() {
 
 export function KeyHints() {
   return (
-    <div className="fixed bottom-3 left-1/2 -translate-x-1/2 z-40 mono text-[11px] text-dim/70 bg-[#0c0f15]/80 border border-line rounded-full px-4 py-1.5 backdrop-blur">
+    <div className="fixed bottom-3 left-1/2 -translate-x-1/2 z-40 mono text-[11px] text-dim/70 bg-[#141430]/90 border border-line rounded-full px-4 py-1.5">
       demo keys · <b className="text-foreground/80">1</b> invoke ·{" "}
       <b className="text-foreground/80">2</b> human-hire ·{" "}
       <b className="text-foreground/80">3</b> mint skill ·{" "}
