@@ -170,19 +170,24 @@ export default function Store() {
   const cards = state.skills[0].id === "s7" ? [state.skills[0], ...state.skills.slice(2)] : rest;
 
   return (
-    <main className="mx-auto max-w-6xl px-5 py-8 w-full">
-      <div className="flex items-end justify-between mb-5">
-        <div>
-          <h1 className="text-xl font-semibold tracking-tight">Skill Store</h1>
-          <p className="text-dim text-sm mt-1">
-            Encrypted expert judgment, callable by agents. Pay per call — the
-            logic never leaves the vault.
-          </p>
+    <main className="mx-auto max-w-6xl px-5 pb-10 w-full">
+      <section className="text-center pt-14 pb-12">
+        <div className="kicker mb-5">Skill Store · pay per call</div>
+        <h1 className="display-hero text-4xl md:text-6xl">
+          Agents hit walls.
+          <br />
+          Experts are <span className="accent-italic">the door</span>.
+        </h1>
+        <p className="text-dim text-sm md:text-base mt-5">
+          Encrypted expert judgment, callable by agents — the logic never
+          leaves the vault.
+        </p>
+        <div className="mono text-[11px] text-dim/80 mt-4 tracking-[0.3em] uppercase">
+          {state.skills.length} skills ·{" "}
+          {state.skills.reduce((a, s) => a + s.calls, 0).toLocaleString()} calls
+          settled
         </div>
-        <div className="mono text-xs text-dim">
-          {state.skills.length} skills · {state.skills.reduce((a, s) => a + s.calls, 0).toLocaleString()} total calls
-        </div>
-      </div>
+      </section>
 
       <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
         <SkillCard

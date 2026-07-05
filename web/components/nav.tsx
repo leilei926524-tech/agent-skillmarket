@@ -4,6 +4,31 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useDemo, yen } from "@/lib/demo";
 
+export function LiquidBackground() {
+  return (
+    <>
+      <div className="liquid-field" aria-hidden>
+        <div className="blob blob-violet" />
+        <div className="blob blob-lav" />
+        <div className="blob blob-cyan" />
+        <div className="blob blob-pink" />
+      </div>
+      <div className="grid-overlay" aria-hidden />
+      <span className="frame-label frame-tl hidden md:block">
+        ExpertOS · Human Intelligence Layer
+      </span>
+      <span className="frame-label frame-tc hidden lg:block">Aurora Violet</span>
+      <span className="frame-label frame-tr hidden md:block">2026 · Osaka</span>
+      <span className="frame-label frame-bl hidden md:block">
+        agent-skillmarket
+      </span>
+      <span className="frame-label frame-br hidden md:block">
+        c0mpiled in Japan pt.3
+      </span>
+    </>
+  );
+}
+
 export function Nav() {
   const path = usePathname();
   const { state } = useDemo();
@@ -13,7 +38,7 @@ export function Nav() {
       href={href}
       className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${
         path === href
-          ? "bg-violet/20 text-white border border-violet/40"
+          ? "bg-white/10 text-white border border-white/25"
           : "text-dim hover:text-white border border-transparent"
       }`}
     >
@@ -22,18 +47,13 @@ export function Nav() {
   );
 
   return (
-    <header className="sticky top-0 z-40 backdrop-blur-md bg-background/70 border-b border-line">
+    <header className="sticky top-0 z-40 backdrop-blur-md bg-background/40 border-b border-line">
       <div className="mx-auto max-w-6xl px-5 h-14 flex items-center gap-4">
         <div className="flex items-center gap-2 mr-2">
-          <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-violet to-green grid place-items-center text-[11px] font-black text-black">
+          <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-violet via-amber to-green grid place-items-center text-[11px] font-black text-background">
             E
           </div>
-          <span className="font-semibold tracking-tight">
-            ExpertOS
-            <span className="text-dim font-normal text-xs ml-2 hidden sm:inline">
-              the human intelligence layer for AI agents
-            </span>
-          </span>
+          <span className="font-semibold tracking-tight">ExpertOS</span>
         </div>
         <nav className="flex items-center gap-1">
           {tab("/", "Skill Store")}

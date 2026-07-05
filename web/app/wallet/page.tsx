@@ -17,27 +17,20 @@ export default function Wallet() {
 
   return (
     <main className="mx-auto max-w-6xl px-5 py-8 w-full">
-      <div className="flex items-end justify-between mb-5">
-        <div>
-          <h1 className="text-xl font-semibold tracking-tight">Seller Wallet</h1>
-          <p className="text-dim text-sm mt-1">
-            Salehin R. <span className="text-green text-xs">✓ verified expert</span> ·
-            every invocation settles to an auditable on-chain record.
-          </p>
-        </div>
-        <span className="chip bg-green/10 text-green border border-green/25">
-          <span className="w-1.5 h-1.5 rounded-full bg-green live-dot" />
-          earning while you sleep
-        </span>
+      <div className="text-center pt-8 pb-8">
+        <div className="kicker mb-4">Seller Wallet · Salehin R. ✓ verified</div>
+        <h1 className="display-hero text-3xl md:text-5xl">
+          Earning <span className="accent-italic">while you sleep</span>.
+        </h1>
       </div>
 
       <div className="grid md:grid-cols-3 gap-4">
         <div className="panel p-6 md:col-span-2">
-          <div className="text-xs text-dim mb-1">available balance</div>
-          <div className="mono text-5xl font-bold tracking-tight text-green">
+          <div className="kicker mb-2">available balance</div>
+          <div className="mono text-6xl md:text-7xl font-bold tracking-tight text-green">
             {yen(balance)}
           </div>
-          <div className="mono text-xs text-dim mt-2">
+          <div className="mono text-xs text-dim mt-3">
             lifetime earnings {yen(lifetime)} · payout rail: USDC · Base Sepolia
           </div>
 
