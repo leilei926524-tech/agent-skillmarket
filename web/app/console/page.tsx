@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useReducer } from "react";
 import { useDemo, yen, GAP_QUERY } from "@/lib/demo";
 
 function timeAgo(ts: number) {
@@ -22,6 +23,12 @@ export default function Console() {
   const { state } = useDemo();
   const maxCalls = Math.max(...state.skills.map((s) => s.calls));
   const taskIdx = PIPE.indexOf(state.humanTask as (typeof PIPE)[number]);
+  // keep relative timestamps moving even when ambient is paused
+  const [, tick] = useReducer((x: number) => x + 1, 0);
+  useEffect(() => {
+    const t = setInterval(tick, 10_000);
+    return () => clearInterval(t);
+  }, []);
 
   return (
     <main className="mx-auto max-w-[1360px] px-6 pb-10 w-full">
@@ -72,7 +79,7 @@ export default function Console() {
           <div className="panel p-5">
             <div className="kicker !text-[10px] mb-4">CALL VOLUME BY SKILL</div>
             <div className="space-y-3">
-              {state.skills.slice(0, 6).map((s) => (
+              {state.skills.map((s) => (
                 <div key={s.id}>
                   <div className="flex justify-between text-[11.5px] mono mb-1">
                     <span className="truncate mr-3">{s.name}</span>
@@ -102,17 +109,21 @@ export default function Console() {
                   “{GAP_QUERY.slice(0, 80)}…”
                 </div>
                 <div className="flex flex-col gap-1.5">
-                  {PIPE.map((p, i) => (
-                    <div key={p} className="flex items-center gap-2 mono text-[12px]">
-                      <span
-                        className={`w-2 h-2 rounded-full ${
-                          i < taskIdx ? "bg-green" : i === taskIdx ? "bg-amber live-dot" : "bg-line"
-                        }`}
-                      />
-                      <span className={i <= taskIdx ? "" : "text-dim/60"}>{PIPE_LABEL[p]}</span>
-                      {i < taskIdx && <span className="text-green ml-auto">✓</span>}
-                    </div>
-                  ))}
+                  {PIPE.map((p, i) => {
+                    const done =
+                      i < taskIdx || (i === taskIdx && state.humanTask === "delivered");
+                    return (
+                      <div key={p} className="flex items-center gap-2 mono text-[12px]">
+                        <span
+                          className={`w-2 h-2 rounded-full ${
+                            done ? "bg-green" : i === taskIdx ? "bg-amber live-dot" : "bg-line"
+                          }`}
+                        />
+                        <span className={i <= taskIdx ? "" : "text-dim/60"}>{PIPE_LABEL[p]}</span>
+                        {done && <span className="text-green ml-auto">✓</span>}
+                      </div>
+                    );
+                  })}
                 </div>
               </>
             )}

@@ -58,6 +58,7 @@ export type DemoState = {
   humanTask: HumanTaskStatus;
   ambient: boolean;
   seen: string[]; // event ids already applied (BroadcastChannel dedupe)
+  resets: number; // bumps on R so pages can clear their local UI state
 };
 
 type Ev =
@@ -229,8 +230,14 @@ function initial(): DemoState {
     humanTask: "hidden",
     ambient: true,
     seen: [],
+    resets: 0,
   };
 }
+
+/* network-wide payout figure derived from live call counts — distinct from
+   any single seller's wallet lifetime (they were being conflated in copy) */
+export const networkPaidJpy = (skills: Skill[]) =>
+  Math.round(skills.reduce((a, s) => a + s.calls * s.priceJpy, 0) * SPLIT);
 
 /* ─────────────────────────── reducer ─────────────────────────── */
 
@@ -243,7 +250,12 @@ function apply(s: DemoState, ev: Ev): DemoState {
       return { ...s, seen, invoking: true, answerShown: false };
 
     case "invoke_hero_settle": {
-      const hero = s.skills[0];
+      // guard: ignore settles with no live invoke — kills the stale
+      // setTimeout after R and double-click double-settles
+      if (!s.invoking) return { ...s, seen };
+      // find by id, NOT index 0 — mint prepends s7 and would hijack the hero
+      const hero = s.skills.find((k) => k.id === "s1");
+      if (!hero) return { ...s, seen };
       const net = Math.round(hero.priceJpy * SPLIT);
       const row: AuditRow = {
         id: ev.id + "r",
@@ -260,8 +272,8 @@ function apply(s: DemoState, ev: Ev): DemoState {
         seen,
         invoking: false,
         answerShown: true,
-        skills: s.skills.map((k, i) =>
-          i === 0 ? { ...k, calls: k.calls + 1 } : k,
+        skills: s.skills.map((k) =>
+          k.id === "s1" ? { ...k, calls: k.calls + 1 } : k,
         ),
         balance: s.balance + net,
         lifetime: s.lifetime + net,
@@ -348,7 +360,8 @@ function apply(s: DemoState, ev: Ev): DemoState {
       return {
         ...s,
         seen,
-        humanTask: "delivered",
+        // a stray 3 without the hire flow must not conjure a completed pipeline
+        humanTask: s.humanTask === "hidden" ? "hidden" : "delivered",
         skills: [MINTED_SKILL, ...s.skills],
         audit: [row, ...s.audit].slice(0, 40),
         toasts: [
@@ -370,7 +383,7 @@ function apply(s: DemoState, ev: Ev): DemoState {
       return { ...s, seen, toasts: s.toasts.filter((t) => t.id !== ev.toastId) };
 
     case "reset":
-      return { ...initial(), seen };
+      return { ...initial(), seen, resets: (s.resets ?? 0) + 1 };
 
     case "hydrate":
       // restore a persisted snapshot; keep dedupe history from both sides
@@ -378,6 +391,7 @@ function apply(s: DemoState, ev: Ev): DemoState {
         ...ev.snap,
         toasts: [],
         invoking: false,
+        resets: ev.snap.resets ?? 0,
         seen: [...new Set([...ev.snap.seen, ...seen])].slice(-200),
       };
 

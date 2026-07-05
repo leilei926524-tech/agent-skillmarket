@@ -12,8 +12,8 @@ function SkillCard({ s, hero, invoking, answerShown }: {
 }) {
   const inner = (
     <div
-      className={`panel panel-hover p-5 flex flex-col gap-3 relative overflow-hidden h-full ${
-        hero ? "md:col-span-2 !border-violet/60" : ""
+      className={`panel p-5 flex flex-col gap-3 relative overflow-hidden h-full ${
+        hero ? "!border-violet/60" : "panel-hover"
       } ${invoking ? "invoking !border-violet" : ""} ${s.isNew ? "!border-amber/70" : ""}`}
     >
       {s.isNew && (
@@ -46,7 +46,16 @@ function SkillCard({ s, hero, invoking, answerShown }: {
         </span>
         <span className="mono text-amber font-semibold">★ {s.rating.toFixed(1)}</span>
         <span className="mono text-dim">{s.calls.toLocaleString()} calls</span>
-        <span className="ml-auto meta text-[10px] text-dim">INSTANT · MCP</span>
+        {hero ? (
+          <Link
+            href={`/skill/${s.id}`}
+            className="ml-auto meta text-[10px] text-violet underline underline-offset-2 hover:text-foreground"
+          >
+            VIEW DETAIL →
+          </Link>
+        ) : (
+          <span className="ml-auto meta text-[10px] text-dim">INSTANT · MCP</span>
+        )}
       </div>
 
       {hero && invoking && (
@@ -79,7 +88,7 @@ function SkillCard({ s, hero, invoking, answerShown }: {
   return hero ? (
     <div className="md:col-span-2">{inner}</div>
   ) : (
-    <Link href="/skill" className="block h-full">{inner}</Link>
+    <Link href={`/skill/${s.id}`} className="block h-full">{inner}</Link>
   );
 }
 
@@ -94,6 +103,7 @@ const PIPE: { key: HumanTaskStatus; label: string }[] = [
 function HumanFallback() {
   const { state } = useDemo();
   const st = state.humanTask;
+  const minted = state.skills.some((k) => k.id === "s7");
   if (st === "hidden") return null;
   const idx = PIPE.findIndex((x) => x.key === st);
 
@@ -106,21 +116,24 @@ function HumanFallback() {
       <p className="mono text-[12.5px] text-dim mt-2">query: “{GAP_QUERY}”</p>
 
       <div className="flex flex-wrap gap-2 mt-4">
-        {PIPE.map((s, i) => (
-          <span
-            key={s.key}
-            className={`chip border ${
-              i < idx
-                ? "bg-green/10 text-green border-green/30"
-                : i === idx
-                  ? "bg-amber/10 text-amber border-amber/40"
-                  : "bg-white/40 text-dim/60 border-line"
-            }`}
-          >
-            {i < idx ? "✓ " : ""}
-            {s.label}
-          </span>
-        ))}
+        {PIPE.map((s, i) => {
+          const done = i < idx || (i === idx && st === "delivered");
+          return (
+            <span
+              key={s.key}
+              className={`chip border ${
+                done
+                  ? "bg-green/10 text-green border-green/30"
+                  : i === idx
+                    ? "bg-amber/10 text-amber border-amber/40"
+                    : "bg-white/40 text-dim/60 border-line"
+              }`}
+            >
+              {done ? "✓ " : ""}
+              {s.label}
+            </span>
+          );
+        })}
       </div>
 
       {idx >= 1 && (
@@ -146,7 +159,11 @@ function HumanFallback() {
       )}
       {st === "delivered" && (
         <div className="mono text-[12px] text-green mt-3 font-bold">
-          ✓ delivered · press 3 — expert approves → task becomes an encrypted skill
+          {minted ? (
+            <>✓ minted → see the 取適法 skill in the grid · <Link href="/skill/s7" className="underline">detail</Link></>
+          ) : (
+            <>✓ delivered · press 3 — expert approves → task becomes an encrypted skill</>
+          )}
         </div>
       )}
     </div>
@@ -174,7 +191,7 @@ export default function Store() {
           {state.skills.length} SKILLS ·{" "}
           {state.skills.reduce((a, s) => a + s.calls, 0).toLocaleString()} CALLS
           <br />
-          THE LOGIC NEVER LEAVES THE VAULT
+          LOGIC STAYS ENCRYPTED · EXTRACTION DETECTABLE
         </div>
       </section>
 

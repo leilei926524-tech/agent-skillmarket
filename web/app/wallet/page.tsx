@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useReducer } from "react";
 import { useDemo, useCountUp, yen } from "@/lib/demo";
 
 function timeAgo(ts: number) {
@@ -14,6 +15,17 @@ export default function Wallet() {
   const balance = useCountUp(state.balance);
   const lifetime = useCountUp(state.lifetime);
   const mySkill = state.skills.find((s) => s.expert === "Salehin R.");
+  // this is ONE seller's wallet — only their own skill's rows belong here;
+  // the full network feed lives on /console
+  const myRows = state.audit.filter(
+    (r) => r.kind === "invoke" && mySkill && r.skillName === mySkill.name,
+  );
+  // keep relative timestamps moving even when ambient is paused
+  const [, tick] = useReducer((x: number) => x + 1, 0);
+  useEffect(() => {
+    const t = setInterval(tick, 10_000);
+    return () => clearInterval(t);
+  }, []);
 
   return (
     <main className="mx-auto max-w-[1360px] px-6 pb-10 w-full">
@@ -86,7 +98,12 @@ export default function Wallet() {
           </span>
         </div>
         <div className="max-h-[420px] overflow-y-auto">
-          {state.audit.map((r) => (
+          {myRows.length === 0 && (
+            <div className="px-5 py-6 meta text-[11px] text-dim">
+              NO SETTLEMENTS YET · PRESS [1] TO SEE AN AGENT INVOKE YOUR SKILL
+            </div>
+          )}
+          {myRows.map((r) => (
             <div
               key={r.id}
               className="row-in px-5 py-2.5 border-b border-line/50 flex items-center gap-3 text-[12.5px] mono"

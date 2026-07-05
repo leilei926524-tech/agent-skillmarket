@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useDemo, yen } from "@/lib/demo";
+import { useDemo, yen, networkPaidJpy } from "@/lib/demo";
 import { Ticker } from "@/components/nav";
 
 const STEPS = [
@@ -9,7 +9,7 @@ const STEPS = [
     n: "01",
     key: "1",
     title: "INVOKE",
-    body: "An agent hits a judgment call it can't make. It invokes an encrypted expert skill over MCP — pays per call, gets the guardrail answer. The logic never leaves the vault.",
+    body: "An agent hits a judgment call it can't make. It invokes an encrypted expert skill over MCP — pays per call, gets the guardrail answer. The raw logic stays encrypted; extraction is detectable and unprofitable by design.",
     foot: "¥120/call · settled on Base Sepolia",
   },
   {
@@ -125,7 +125,7 @@ export default function Landing() {
             { v: totalCalls.toLocaleString(), k: "CALLS SETTLED" },
             { v: String(state.skills.length), k: "ENCRYPTED SKILLS LIVE" },
             { v: "85 / 15", k: "EXPERT / PLATFORM SPLIT" },
-            { v: yen(state.lifetime), k: "PAID TO EXPERTS" },
+            { v: yen(networkPaidJpy(state.skills)), k: "PAID TO EXPERTS · NETWORK" },
           ].map((s) => (
             <div key={s.k}>
               <div className="mono text-3xl md:text-4xl font-bold">{s.v}</div>

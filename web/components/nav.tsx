@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import { useDemo, yen } from "@/lib/demo";
+import { useDemo, yen, networkPaidJpy } from "@/lib/demo";
 
 /* sky paper + hairline rails + crosshair marks */
 export function ChartPaper() {
@@ -41,7 +41,7 @@ function Clock() {
 const NAV = [
   { href: "/", label: "INDEX" },
   { href: "/store", label: "STORE" },
-  { href: "/skill", label: "SKILL[01]" },
+  { href: "/skill/s1", label: "SKILL" },
   { href: "/wallet", label: "WALLET" },
   { href: "/console", label: "CONSOLE" },
 ];
@@ -62,7 +62,9 @@ export function Nav() {
               key={n.href}
               href={n.href}
               className={`transition-colors hover:text-violet ${
-                path === n.href ? "text-violet font-bold" : "text-foreground/80"
+                (n.href === "/" ? path === "/" : path.startsWith(n.href.split("/").slice(0, 2).join("/")))
+                  ? "text-violet font-bold"
+                  : "text-foreground/80"
               }`}
             >
               {n.label}
@@ -75,7 +77,7 @@ export function Nav() {
             NEGO-AGENT-7F2E
           </span>
           <span className="text-dim">
-            GMT+9 OSAKA <Clock /> · {yen(state.lifetime)} SETTLED
+            GMT+9 OSAKA <Clock /> · {yen(networkPaidJpy(state.skills))} PAID OUT
           </span>
         </div>
       </div>
