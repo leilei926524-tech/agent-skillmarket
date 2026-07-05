@@ -16,55 +16,62 @@ export default function Wallet() {
   const mySkill = state.skills.find((s) => s.expert === "Salehin R.");
 
   return (
-    <main className="mx-auto max-w-6xl px-5 py-8 w-full">
-      <div className="text-center pt-8 pb-8">
-        <div className="kicker mb-4">Seller Wallet · Salehin R. ✓ verified</div>
-        <h1 className="display-hero text-3xl md:text-5xl">
-          Earning <span className="accent-italic">while you sleep</span>.
-        </h1>
-      </div>
+    <main className="mx-auto max-w-[1360px] px-6 pb-10 w-full">
+      <section className="pt-10 pb-8 flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <div className="kicker mb-3">
+            Seller Wallet · Salehin R. <span className="text-green">✓ verified</span>
+          </div>
+          <h1 className="display-hero text-4xl md:text-6xl">
+            Earning while
+            <br />
+            you sleep.
+          </h1>
+        </div>
+        <span className="sticker rotate-[2deg]">judgment = an asset now ✦</span>
+      </section>
 
       <div className="grid md:grid-cols-3 gap-4">
         <div className="panel p-6 md:col-span-2">
-          <div className="kicker mb-2">available balance</div>
-          <div className="mono text-6xl md:text-7xl font-bold tracking-tight text-green">
+          <div className="kicker !text-[10px] mb-2">AVAILABLE BALANCE</div>
+          <div className="mono text-6xl md:text-7xl font-bold tracking-tight text-violet">
             {yen(balance)}
           </div>
-          <div className="mono text-xs text-dim mt-3">
-            lifetime earnings {yen(lifetime)} · payout rail: USDC · Base Sepolia
+          <div className="meta text-[11.5px] text-dim mt-3">
+            LIFETIME {yen(lifetime)} · PAYOUT RAIL: USDC · BASE SEPOLIA
           </div>
 
-          <div className="mt-5">
-            <div className="flex justify-between text-[11px] mono text-dim mb-1">
-              <span>expert 85%</span>
-              <span>platform 15%</span>
+          <div className="mt-6">
+            <div className="flex justify-between meta text-[10.5px] text-dim mb-1.5">
+              <span>EXPERT 85%</span>
+              <span>PLATFORM 15%</span>
             </div>
-            <div className="h-2 rounded-full overflow-hidden flex bg-white/5">
-              <div className="bg-green/80" style={{ width: "85%" }} />
-              <div className="bg-violet/70" style={{ width: "15%" }} />
+            <div className="h-2.5 rounded-full overflow-hidden flex bg-white/60 border border-line">
+              <div className="bg-green/85" style={{ width: "85%" }} />
+              <div className="bg-violet/80" style={{ width: "15%" }} />
             </div>
-            <div className="text-[11px] text-dim mt-2">
+            <div className="text-[12px] text-dim mt-2">
               We invert the expert-network split — the expert keeps 85% and owns
               the asset.
             </div>
           </div>
         </div>
 
-        <div className="panel p-6">
-          <div className="text-xs text-dim mb-2">your top skill</div>
+        <div className="panel panel-hover p-6">
+          <div className="kicker !text-[10px] mb-2">YOUR TOP SKILL</div>
           {mySkill && (
             <>
-              <div className="font-medium leading-snug">{mySkill.name}</div>
+              <div className="font-bold leading-snug">{mySkill.name}</div>
               <div className="mono text-sm mt-3">
-                {yen(mySkill.priceJpy)}/call · ★ {mySkill.rating}
+                {yen(mySkill.priceJpy)}/call · <span className="text-amber">★ {mySkill.rating}</span>
               </div>
-              <div className="mono text-3xl font-bold mt-2">
+              <div className="mono text-4xl font-bold mt-2">
                 {mySkill.calls.toLocaleString()}
                 <span className="text-xs text-dim font-normal ml-1">calls</span>
               </div>
-              <div className="text-[11px] text-dim mt-3">
-                🔒 encrypted at rest · outputs fingerprinted · anomaly
-                rate-limits on
+              <div className="meta text-[10.5px] text-dim mt-4 leading-relaxed">
+                🔒 ENCRYPTED AT REST · OUTPUTS FINGERPRINTED · ANOMALY
+                RATE-LIMITS ON
               </div>
             </>
           )}
@@ -72,10 +79,10 @@ export default function Wallet() {
       </div>
 
       <div className="panel mt-4 overflow-hidden">
-        <div className="px-5 py-3 border-b border-line flex items-center justify-between">
-          <span className="text-sm font-semibold">Audit log</span>
-          <span className="mono text-[11px] text-dim">
-            immutable invocation → payment records
+        <div className="px-5 py-3 border-b border-line flex items-center justify-between bg-white/50">
+          <span className="text-sm font-bold">Audit log</span>
+          <span className="meta text-[10.5px] text-dim">
+            IMMUTABLE INVOCATION → PAYMENT RECORDS
           </span>
         </div>
         <div className="max-h-[420px] overflow-y-auto">
@@ -88,19 +95,17 @@ export default function Wallet() {
               <span
                 className={`chip shrink-0 ${
                   r.kind === "mint"
-                    ? "bg-amber/15 text-amber border border-amber/30"
-                    : "bg-violet/10 text-violet border border-violet/25"
+                    ? "bg-amber/10 text-amber border border-amber/40"
+                    : "bg-violet/10 text-violet border border-violet/30"
                 }`}
               >
                 {r.kind === "mint" ? "skill_minted" : "skill_invoke"}
               </span>
               <span className="text-dim truncate">{r.agent}</span>
               <span className="truncate flex-1">{r.skillName}</span>
-              {r.net > 0 && (
-                <span className="text-green shrink-0">+{yen(r.net)}</span>
-              )}
+              {r.net > 0 && <span className="text-green font-bold shrink-0">+{yen(r.net)}</span>}
               <span className="text-dim/70 shrink-0 hidden md:inline">{r.tx}</span>
-              <span className="chip bg-green/10 text-green border border-green/20 shrink-0">
+              <span className="chip bg-green/10 text-green border border-green/30 shrink-0">
                 settled
               </span>
             </div>

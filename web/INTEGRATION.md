@@ -5,6 +5,11 @@ demo driver (keyboard keys below) with zero backend dependency — venue wifi
 dying cannot kill the demo. Wiring the real pipeline in is optional polish,
 to be attempted **only after the core pipeline is done** (koki's 15:30 rule).
 
+Pages (HAOQI-chart visual language, sky-paper/Swiss-grid):
+`/` landing hero · `/store` marketplace (beat 1 + human-fallback panel) ·
+`/skill` detail w/ INVOKE button (fires beat 1) · `/wallet` seller wallet ·
+`/console` live ops board (event stream, volume, task pipeline).
+
 ## Demo driver (works today, no backend)
 
 | Key | Beat |

@@ -1,207 +1,154 @@
 "use client";
 
-import { useDemo, yen, HERO_ANSWER, GAP_QUERY } from "@/lib/demo";
-import type { Skill, HumanTaskStatus } from "@/lib/demo";
+import Link from "next/link";
+import { useDemo, yen } from "@/lib/demo";
+import { Ticker } from "@/components/nav";
 
-function Stars({ r }: { r: number }) {
-  return (
-    <span className="text-amber text-xs mono">
-      ★ {r.toFixed(1)}
-    </span>
-  );
-}
-
-function SkillCard({ s, hero, invoking, answerShown }: {
-  s: Skill;
-  hero?: boolean;
-  invoking?: boolean;
-  answerShown?: boolean;
-}) {
-  return (
-    <div
-      className={`panel p-5 flex flex-col gap-3 relative overflow-hidden transition-all ${
-        hero ? "md:col-span-2 border-violet/30" : ""
-      } ${invoking ? "invoking border-violet" : ""} ${
-        s.isNew ? "border-amber/40" : ""
-      }`}
-    >
-      {s.isNew && (
-        <span className="absolute top-0 right-0 chip bg-amber/15 text-amber border border-amber/30 rounded-none rounded-bl-xl">
-          NEW · {s.minted}
-        </span>
-      )}
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <div className="font-semibold leading-snug">{s.name}</div>
-          <div className="text-xs text-dim mt-1">
-            {s.expert}{" "}
-            {s.verified && (
-              <span className="text-green" title="verified expert">✓ verified</span>
-            )}{" "}
-            · {s.category}
-          </div>
-        </div>
-        <span className="chip bg-violet/10 text-violet border border-violet/25 shrink-0">
-          🔒 encrypted
-        </span>
-      </div>
-
-      <p className="text-[13px] text-dim leading-relaxed">{s.blurb}</p>
-
-      <div className="mt-auto flex items-center gap-4 text-xs">
-        <span className="mono text-base font-bold text-foreground">
-          {yen(s.priceJpy)}
-          <span className="text-dim text-[11px] font-normal">/call</span>
-        </span>
-        <Stars r={s.rating} />
-        <span className="mono text-dim">{s.calls.toLocaleString()} calls</span>
-        <span className="ml-auto chip bg-white/5 text-dim border border-line">
-          instant · MCP
-        </span>
-      </div>
-
-      {hero && invoking && (
-        <div className="absolute inset-0 grid place-items-center bg-background/85 backdrop-blur-[2px]">
-          <div className="text-center">
-            <div className="mono text-violet text-sm">
-              nego-agent-7f2e → invoke()
-            </div>
-            <div className="mono text-xs text-dim mt-2">
-              paying {yen(s.priceJpy)} · x402 settlement · decrypting in vault…
-            </div>
-          </div>
-        </div>
-      )}
-
-      {hero && answerShown && (
-        <div className="border-t border-line pt-3 mt-1">
-          <div className="mono text-[11px] text-green mb-1.5">
-            ● judgment returned · logic stays encrypted · output fingerprinted
-          </div>
-          <p className="text-[13.5px] leading-relaxed type-in">
-            {HERO_ANSWER}
-          </p>
-          <div className="mono text-[11px] text-dim mt-2">
-            expert +{yen(Math.round(s.priceJpy * 0.85))} · platform{" "}
-            {yen(s.priceJpy - Math.round(s.priceJpy * 0.85))} · settled on Base
-            Sepolia
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-const STEPS: { key: HumanTaskStatus; label: string }[] = [
-  { key: "gap", label: "capability gap detected" },
-  { key: "matched", label: "verified expert matched" },
-  { key: "offer_sent", label: "task offer emailed (opt-in)" },
-  { key: "accepted", label: "accepted by expert" },
-  { key: "delivered", label: "delivered → skill draft" },
+const STEPS = [
+  {
+    n: "01",
+    key: "1",
+    title: "INVOKE",
+    body: "An agent hits a judgment call it can't make. It invokes an encrypted expert skill over MCP — pays per call, gets the guardrail answer. The logic never leaves the vault.",
+    foot: "¥120/call · settled on Base Sepolia",
+  },
+  {
+    n: "02",
+    key: "2",
+    title: "HIRE",
+    body: "No skill exists? The agent doesn't stop. ExpertOS matches a verified human expert and emails a consent-based task offer — scope, deadline, price.",
+    foot: "opt-in experts · ¥15,000 median task",
+  },
+  {
+    n: "03",
+    key: "3",
+    title: "MINT",
+    body: "The delivered task is compiled into a skill draft. The expert reviews, approves, encrypts — and earns 85% on every future call, while asleep.",
+    foot: "every job becomes tomorrow's skill",
+  },
 ];
 
-function HumanFallback() {
+export default function Landing() {
   const { state } = useDemo();
-  const st = state.humanTask;
-  if (st === "hidden") return null;
-  const idx = STEPS.findIndex((x) => x.key === st);
+  const totalCalls = state.skills.reduce((a, s) => a + s.calls, 0);
 
   return (
-    <div className="panel border-amber/30 p-5 mt-6">
-      <div className="flex items-center gap-2 text-sm font-semibold">
-        <span className="w-2 h-2 rounded-full bg-amber live-dot" />
-        No skill found — hiring a verified human
-      </div>
-      <p className="mono text-[12.5px] text-dim mt-2">
-        query: “{GAP_QUERY}”
-      </p>
+    <main>
+      {/* ── hero ── */}
+      <section className="mx-auto max-w-[1360px] px-6 pt-12 md:pt-16 pb-10 relative">
+        <div className="flex flex-wrap gap-6 justify-between items-start mb-10">
+          <div className="kicker">
+            The Human Intelligence
+            <br />
+            Layer for AI agents
+          </div>
+          <div className="meta text-[12px] max-w-sm hidden md:block leading-relaxed">
+            Agents invoke encrypted expert skills instantly, or hire verified
+            humans when no skill exists — every completed task becomes
+            tomorrow&apos;s reusable skill.
+          </div>
+          <div className="meta text-[12px] text-dim hidden lg:block text-right">
+            Thinking in agents.
+            <br />
+            Pricing in judgment.
+          </div>
+        </div>
 
-      <div className="flex flex-wrap gap-2 mt-4">
-        {STEPS.map((s, i) => (
-          <span
-            key={s.key}
-            className={`chip border ${
-              i < idx
-                ? "bg-green/10 text-green border-green/25"
-                : i === idx
-                  ? "bg-amber/15 text-amber border-amber/35"
-                  : "bg-white/3 text-dim/60 border-line"
-            }`}
-          >
-            {i < idx ? "✓ " : ""}
-            {s.label}
-          </span>
-        ))}
-      </div>
+        <div className="relative">
+          <h1 className="display-hero text-[13vw] md:text-[7.2rem] lg:text-[8.4rem]">
+            Agents hit walls.
+            <br />
+            Experts are
+            <br />
+            the door.
+          </h1>
 
-      {idx >= 1 && (
-        <div className="mt-4 grid md:grid-cols-2 gap-4">
-          <div className="text-[13px]">
-            <div className="text-dim text-xs mb-1">matched expert</div>
-            <div className="font-medium">
-              K. Watanabe <span className="text-green text-xs">✓ verified</span>
-            </div>
-            <div className="text-dim text-xs">
-              JP commercial compliance · 18 yrs · opt-in to agent offers
+          {/* gel centerpiece */}
+          <div className="absolute right-[4%] top-[26%] hidden md:block select-none">
+            <div className="gel px-10 py-7 text-2xl font-extrabold rotate-[-7deg]">
+              ¥120<span className="text-sm font-semibold ml-1 opacity-90">/call</span>
+              <span className="sparkle" style={{ left: "-12px", top: "-10px" }} />
+              <span
+                className="sparkle"
+                style={{ right: "-8px", bottom: "-12px", width: "18px", height: "18px", animationDelay: "1.2s" }}
+              />
             </div>
           </div>
-          {idx >= 2 && (
-            <div className="mono text-[11.5px] text-dim border border-line rounded-lg p-3 bg-black/30">
-              <div className="text-foreground/80">to: k.watanabe@…(registered)</div>
-              <div>subject: [ExpertOS task #217] 取適法 payment-terms review</div>
-              <div>scope: promissory-note clause legality · deadline 16:00</div>
-              <div>offer: ¥15,000 · output: guardrail memo (approve/deny/escalate)</div>
-            </div>
-          )}
+          <div className="absolute left-[46%] bottom-[-8px] hidden lg:block">
+            <span className="sticker rotate-[2.5deg]">85% to the expert ✓</span>
+          </div>
         </div>
-      )}
-      {st === "delivered" && (
-        <div className="mono text-[12px] text-green mt-3">
-          ✓ delivered · press 3 — expert approves → task becomes an encrypted skill
-        </div>
-      )}
-    </div>
-  );
-}
 
-export default function Store() {
-  const { state } = useDemo();
-  const [hero, ...rest] = state.skills[0].id === "s7" ? [state.skills[1], state.skills[0], ...state.skills.slice(2)] : state.skills;
-  const cards = state.skills[0].id === "s7" ? [state.skills[0], ...state.skills.slice(2)] : rest;
-
-  return (
-    <main className="mx-auto max-w-6xl px-5 pb-10 w-full">
-      <section className="text-center pt-14 pb-12">
-        <div className="kicker mb-5">Skill Store · pay per call</div>
-        <h1 className="display-hero text-4xl md:text-6xl">
-          Agents hit walls.
-          <br />
-          Experts are <span className="accent-italic">the door</span>.
-        </h1>
-        <p className="text-dim text-sm md:text-base mt-5">
-          Encrypted expert judgment, callable by agents — the logic never
-          leaves the vault.
-        </p>
-        <div className="mono text-[11px] text-dim/80 mt-4 tracking-[0.3em] uppercase">
-          {state.skills.length} skills ·{" "}
-          {state.skills.reduce((a, s) => a + s.calls, 0).toLocaleString()} calls
-          settled
+        <div className="mt-10 flex flex-wrap items-center gap-4">
+          <Link href="/store" className="btn-ink">
+            ENTER THE STORE <span aria-hidden>→</span>
+          </Link>
+          <Link
+            href="/console"
+            className="meta text-[12px] underline underline-offset-4 hover:text-violet"
+          >
+            WATCH LIVE CONSOLE
+          </Link>
+          <span className="meta text-[11px] text-dim ml-auto hidden md:inline">
+            PREFERS-REDUCED-MOTION SAFE
+          </span>
         </div>
       </section>
 
-      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-        <SkillCard
-          s={hero}
-          hero
-          invoking={state.invoking}
-          answerShown={state.answerShown}
-        />
-        {cards.map((s) => (
-          <SkillCard key={s.id} s={s} />
-        ))}
-      </div>
+      <Ticker />
 
-      <HumanFallback />
+      {/* ── system: three ruled columns keyed to the demo ── */}
+      <section className="mx-auto max-w-[1360px] px-6 py-14">
+        <div className="kicker mb-8">The system · press 1 — 2 — 3</div>
+        <div className="grid md:grid-cols-3">
+          {STEPS.map((s, i) => (
+            <div
+              key={s.n}
+              className={`py-6 md:py-2 md:px-8 ${i > 0 ? "md:border-l border-line border-t md:border-t-0" : ""} md:first:pl-0`}
+            >
+              <div className="flex items-baseline justify-between">
+                <span className="mono text-5xl font-bold text-violet/90">{s.n}</span>
+                <span className="meta text-[10.5px] text-dim">KEY [{s.key}]</span>
+              </div>
+              <h3 className="display-hero text-2xl mt-4">{s.title}</h3>
+              <p className="text-[14px] leading-relaxed mt-3 text-foreground/85">{s.body}</p>
+              <div className="meta text-[11px] text-dim mt-4">{s.foot}</div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* ── stats band ── */}
+      <section className="border-t border-b border-line bg-white/35">
+        <div className="mx-auto max-w-[1360px] px-6 py-8 grid grid-cols-2 md:grid-cols-4 gap-6">
+          {[
+            { v: totalCalls.toLocaleString(), k: "CALLS SETTLED" },
+            { v: String(state.skills.length), k: "ENCRYPTED SKILLS LIVE" },
+            { v: "85 / 15", k: "EXPERT / PLATFORM SPLIT" },
+            { v: yen(state.lifetime), k: "PAID TO EXPERTS" },
+          ].map((s) => (
+            <div key={s.k}>
+              <div className="mono text-3xl md:text-4xl font-bold">{s.v}</div>
+              <div className="kicker mt-2 !text-[9.5px]">{s.k}</div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* ── flywheel ── */}
+      <section className="mx-auto max-w-[1360px] px-6 py-14">
+        <div className="kicker mb-6">The flywheel</div>
+        <p className="display-hero text-2xl md:text-4xl leading-tight max-w-4xl">
+          More agent missions <span className="text-violet">→</span> more human
+          work <span className="text-violet">→</span> more reusable skills{" "}
+          <span className="text-violet">→</span> better ExpertOS<span className="text-violet">.</span>
+        </p>
+        <div className="mt-8 flex flex-wrap gap-3">
+          <span className="sticker">Upwork is human-to-human</span>
+          <span className="sticker rotate-[2deg]">We are agent-to-skill</span>
+          <span className="sticker rotate-[-1.5deg]">and agent-to-human ✦</span>
+        </div>
+      </section>
     </main>
   );
 }
