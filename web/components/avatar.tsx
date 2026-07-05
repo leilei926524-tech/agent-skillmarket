@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { avatarUrl } from "@/lib/demo";
 
-/* GitHub pixel identicon with an initials fallback (offline-safe) */
+/* real-photo headshot with an initials fallback (offline-safe) */
 export function Avatar({
   id,
   name,
@@ -46,7 +46,7 @@ export function Avatar({
           alt=""
           width={size}
           height={size}
-          style={{ imageRendering: "pixelated" }}
+          className="w-full h-full object-cover"
           onError={() => setFailed(true)}
         />
       )}

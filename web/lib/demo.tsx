@@ -26,11 +26,34 @@ export type Skill = {
   isNew?: boolean;
 };
 
-/* pixel avatar per expert (DiceBear pixel-art, GitHub-default-avatar vibe) —
-   seeded by skill id so it's stable; components fall back to initials offline
-   (github.com/identicons 404s on arbitrary seeds, so DiceBear it is) */
+/* real-photo headshots (randomuser.me portrait library) — fixed index per
+   expert so avatars are stable; gender matched to the persona name.
+   Components fall back to initials when offline. */
+const PORTRAIT: Record<string, string> = {
+  s1: "men/32",   // Salehin R.
+  s2: "women/44", // M. (Mika) Tanaka
+  s3: "men/11",   // A. Fujimori
+  s4: "men/75",   // D. Okafor
+  s5: "women/65", // Y. Park
+  s6: "men/52",   // R. Ito
+  s7: "men/85",   // K. Watanabe
+  s8: "men/22",   // Chen Wei
+  s9: "men/41",   // S. Nakamura
+  s10: "men/36",  // P. Sharma
+  s11: "women/12",// L. Müller
+  s12: "women/29",// Aoi K.
+  s13: "men/67",  // J. Rivera
+  s14: "women/56",// E. Goldberg
+  s15: "men/93",  // H. Yamamoto
+  s16: "men/17",  // T. Ogawa
+  s17: "women/33",// M. Suzuki
+  s18: "men/59",  // F. Dubois
+  s19: "women/68",// N. Okonkwo
+};
 export const avatarUrl = (id: string) =>
-  `https://api.dicebear.com/9.x/pixel-art/png?seed=expertos-${id}&size=96`;
+  `https://randomuser.me/api/portraits/${PORTRAIT[id] ?? `men/${(seed0(id) % 90) + 1}`}.jpg`;
+const seed0 = (id: string) =>
+  [...id].reduce((a, c) => a + c.charCodeAt(0), 0);
 
 export type AuditRow = {
   id: string;
