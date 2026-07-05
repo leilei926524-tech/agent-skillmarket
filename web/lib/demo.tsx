@@ -29,26 +29,29 @@ export type Skill = {
 /* real-photo headshots (randomuser.me portrait library) — fixed index per
    expert so avatars are stable; gender matched to the persona name.
    Components fall back to initials when offline. */
+/* hand-picked from the full library: md5-deduped (the library itself has 17
+   duplicate index pairs, e.g. women 33/56 are one photo) and face-matched to
+   each persona (JP personas get Asian faces, age/vibe aligned) */
 const PORTRAIT: Record<string, string> = {
-  s1: "men/32",   // Salehin R.
-  s2: "women/44", // M. (Mika) Tanaka
-  s3: "men/11",   // A. Fujimori
-  s4: "men/75",   // D. Okafor
-  s5: "women/65", // Y. Park
-  s6: "men/52",   // R. Ito
-  s7: "men/85",   // K. Watanabe
-  s8: "men/22",   // Chen Wei
-  s9: "men/41",   // S. Nakamura
-  s10: "men/36",  // P. Sharma
-  s11: "women/12",// L. Müller
-  s12: "women/29",// Aoi K.
-  s13: "men/67",  // J. Rivera
-  s14: "women/56",// E. Goldberg
-  s15: "men/93",  // H. Yamamoto
-  s16: "men/17",  // T. Ogawa
-  s17: "women/33",// M. Suzuki
-  s18: "men/59",  // F. Dubois
-  s19: "women/68",// N. Okonkwo
+  s1: "men/69",   // Salehin R. — analyst in a suit
+  s2: "women/2",  // M. (Mika) Tanaka — warm CS smile
+  s3: "men/4",    // A. Fujimori
+  s4: "men/49",   // D. Okafor — GRC, suit
+  s5: "women/78", // Y. Park
+  s6: "men/26",   // R. Ito — 税理士 in glasses
+  s7: "men/92",   // K. Watanabe — compliance, glasses
+  s8: "men/90",   // Chen Wei — young engineer
+  s9: "women/51", // S. Nakamura — SRE lead
+  s10: "men/5",   // P. Sharma
+  s11: "women/3", // L. Müller
+  s12: "women/60",// Aoi K. — creator
+  s13: "men/95",  // J. Rivera
+  s14: "women/23",// E. Goldberg — lawyer in blazer
+  s15: "women/83",// H. Yamamoto — retired engineer, the flywheel face
+  s16: "women/91",// T. Ogawa — Osaka chef
+  s17: "women/27",// M. Suzuki
+  s18: "men/44",  // F. Dubois
+  s19: "women/36",// N. Okonkwo — coach
 };
 export const avatarUrl = (id: string) =>
   `https://randomuser.me/api/portraits/${PORTRAIT[id] ?? `men/${(seed0(id) % 90) + 1}`}.jpg`;
