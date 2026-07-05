@@ -77,9 +77,9 @@ export default function Console() {
         <div className="space-y-4">
           {/* per-skill volume */}
           <div className="panel p-5">
-            <div className="kicker !text-[10px] mb-4">CALL VOLUME BY SKILL</div>
+            <div className="kicker !text-[10px] mb-4">TOP SKILLS BY VOLUME</div>
             <div className="space-y-3">
-              {state.skills.map((s) => (
+              {[...state.skills].sort((a, b) => b.calls - a.calls).slice(0, 8).map((s) => (
                 <div key={s.id}>
                   <div className="flex justify-between text-[11.5px] mono mb-1">
                     <span className="truncate mr-3">{s.name}</span>

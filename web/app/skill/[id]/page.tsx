@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useDemo, yen, HERO_ANSWER } from "@/lib/demo";
+import { Avatar } from "@/components/avatar";
 
 /* per-skill showcase content lives OUTSIDE demo state so old persisted
    snapshots (without these fields) can never break hydration */
@@ -49,6 +50,24 @@ const SAMPLES: Record<string, { q: string; a: string; built: string }> = {
     a: "No. Since 2026-01-01 the Toritekihō flat-out bans promissory-note payment to covered subcontractors. Switch to bank transfer ≤60 days, and you cannot deduct the transfer fee without written agreement. Unilateral price cuts without negotiation are now a named violation.",
     built:
       "Minted from completed human task #217 — reviewed and approved by K. Watanabe.",
+  },
+  s8: {
+    q: "Spring Boot 1.5 monolith, 400k LOC, bank client wants microservices in 6 months. Realistic?",
+    a: "No — and don't try. Strangle, don't rewrite: carve out the 3 highest-churn domains behind an API gateway first, leave the batch/ledger core alone (it's stable and audited), and budget 6 months for just the first slice + CI/CD spine. A full decomposition pitch is how these projects die in month 9.",
+    built:
+      "Migration triage judgment from a decade of bank-scale Java: what to strangle, what to rewrite, what to respectfully leave alone.",
+  },
+  s14: {
+    q: "Series A term sheet: 1x participating preferred, 2-of-5 board with investor chair, full-ratchet anti-dilution. Sign?",
+    a: "Three red flags, escalating: participating preferred is off-market post-2023 — push to 1x non-participating. Full ratchet is a walk-away unless the valuation is a gift; counter with broad-based weighted average. The board math is the killer: 2-of-5 with investor chair plus a fiduciary-duty clause is de facto control. Trade valuation for governance, never the reverse.",
+    built:
+      "Red-flag pattern library from 300+ venture financings on both sides of the table.",
+  },
+  s15: {
+    q: "New ceramic substrate vendor passed the paper audit. Line trial next week — what do we actually look for?",
+    a: "Ignore the cert binder. Watch three things on the floor: whether operators touch the kiln schedule manually (recipe discipline), the state of the incoming-powder storage (humidity logs, FIFO), and how they handle a lot that fails visual — if it goes back into rework without an engineer's sign-off, walk away. Ask for their last 6 months of yield Pareto, not their best quarter.",
+    built:
+      "Thirty years of supplier qualification instinct from Kyocera process engineering — the judgment no datasheet carries, now earning per call in retirement.",
   },
 };
 
@@ -129,11 +148,17 @@ export default function SkillDetail() {
         <div>
           <div className="kicker mb-3">{s.category} · encrypted skill</div>
           <h1 className="display-hero text-4xl md:text-6xl">{s.name}</h1>
-          <div className="meta text-[12px] mt-4">
-            BY {s.expert.toUpperCase()}{" "}
-            <span className="text-green">✓ VERIFIED EXPERT</span>
-            {isHero && <> · ON THIS TEAM TODAY</>}
-            {s.isNew && <> · <span className="text-amber">MINTED TODAY FROM TASK #217</span></>}
+          <div className="flex items-center gap-3 mt-5">
+            <Avatar id={s.id} name={s.expert} size={52} />
+            <div>
+              <div className="meta text-[12px]">
+                {s.expert.toUpperCase()}{" "}
+                <span className="text-green">✓ VERIFIED EXPERT</span>
+                {isHero && <> · ON THIS TEAM TODAY</>}
+                {s.isNew && <> · <span className="text-amber">MINTED TODAY FROM TASK #217</span></>}
+              </div>
+              <div className="text-[12.5px] text-dim mt-0.5">{s.bio}</div>
+            </div>
           </div>
           <p className="text-[15px] leading-relaxed mt-5 max-w-xl text-foreground/85">
             {s.blurb} {sample?.built}

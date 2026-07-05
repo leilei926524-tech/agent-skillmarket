@@ -15,6 +15,7 @@ export type Skill = {
   id: string;
   name: string;
   expert: string;
+  bio: string; // one-line résumé shown under the avatar
   verified: boolean;
   priceJpy: number;
   rating: number;
@@ -24,6 +25,12 @@ export type Skill = {
   minted?: string; // set when converted from a human task
   isNew?: boolean;
 };
+
+/* pixel avatar per expert (DiceBear pixel-art, GitHub-default-avatar vibe) —
+   seeded by skill id so it's stable; components fall back to initials offline
+   (github.com/identicons 404s on arbitrary seeds, so DiceBear it is) */
+export const avatarUrl = (id: string) =>
+  `https://api.dicebear.com/9.x/pixel-art/png?seed=expertos-${id}&size=96`;
 
 export type AuditRow = {
   id: string;
@@ -89,6 +96,7 @@ const SKILLS0: Skill[] = [
     id: "s1",
     name: "B2B SaaS Pricing Exception Expert",
     expert: "Salehin R.",
+    bio: "Working financial analyst · ex-KPMG deal advisory · on this team today",
     verified: true,
     priceJpy: 120,
     rating: 4.9,
@@ -101,6 +109,7 @@ const SKILLS0: Skill[] = [
     id: "s2",
     name: "Refund & Credit Approval Guardrails",
     expert: "M. Tanaka",
+    bio: "Ex-Zendesk JP CS lead · 4,000+ escalations resolved",
     verified: true,
     priceJpy: 80,
     rating: 4.7,
@@ -112,6 +121,7 @@ const SKILLS0: Skill[] = [
     id: "s3",
     name: "JP Market-Entry Price Localization",
     expert: "A. Fujimori",
+    bio: "Ex-Rakuten pricing PM · 12 yrs Japan go-to-market",
     verified: true,
     priceJpy: 150,
     rating: 4.8,
@@ -123,6 +133,7 @@ const SKILLS0: Skill[] = [
     id: "s4",
     name: "Enterprise Security Questionnaire Triage",
     expert: "D. Okafor",
+    bio: "GRC lead, ex-Stripe · SOC2 & ISO27001 · 300+ questionnaires",
     verified: true,
     priceJpy: 90,
     rating: 4.6,
@@ -134,6 +145,7 @@ const SKILLS0: Skill[] = [
     id: "s5",
     name: "HR Offer Negotiation Bands (JP)",
     expert: "Y. Park",
+    bio: "Ex-Mercari HRBP · 500+ tech offers closed",
     verified: true,
     priceJpy: 110,
     rating: 4.8,
@@ -145,6 +157,7 @@ const SKILLS0: Skill[] = [
     id: "s6",
     name: "Cross-border Invoice & インボイス Edge Cases",
     expert: "R. Ito",
+    bio: "税理士 (JP tax accountant) · cross-border SaaS specialist",
     verified: true,
     priceJpy: 100,
     rating: 4.7,
@@ -152,12 +165,160 @@ const SKILLS0: Skill[] = [
     category: "Finance Ops",
     blurb: "Qualified-invoice traps for non-JP counterparties.",
   },
+  {
+    id: "s8",
+    name: "Legacy Java Migration Triage",
+    expert: "Chen Wei",
+    bio: "Ex-Alibaba P7 · 10 yrs full-stack · JSConf guest speaker",
+    verified: true,
+    priceJpy: 130,
+    rating: 4.8,
+    calls: 1102,
+    category: "Engineering",
+    blurb:
+      "What to strangle, what to rewrite, what to leave alone — Spring→K8s at bank scale.",
+  },
+  {
+    id: "s9",
+    name: "Prod Incident War-Room Commander",
+    expert: "S. Nakamura",
+    bio: "Ex-LINE SRE lead · 200+ Sev-1 incidents · SRECon speaker",
+    verified: true,
+    priceJpy: 180,
+    rating: 4.9,
+    calls: 673,
+    category: "Engineering · SRE",
+    blurb:
+      "First 15 minutes of a Sev-1: what to check, who to page, when to roll back.",
+  },
+  {
+    id: "s10",
+    name: "AWS Cost Anomaly Judgment",
+    expert: "P. Sharma",
+    bio: "Ex-AWS TAM · $40M+ cumulative client savings",
+    verified: true,
+    priceJpy: 90,
+    rating: 4.7,
+    calls: 1540,
+    category: "FinOps",
+    blurb: "Spike triage: real growth, misconfig, or abuse — and the safe kill-switch order.",
+  },
+  {
+    id: "s11",
+    name: "Cold Outreach Reply Doctor",
+    expert: "L. Müller",
+    bio: "20% reply rate across 50k B2B emails · ex-Salesloft",
+    verified: true,
+    priceJpy: 70,
+    rating: 4.5,
+    calls: 2214,
+    category: "Sales",
+    blurb: "Line-by-line surgery on the email that isn't getting answered.",
+  },
+  {
+    id: "s12",
+    name: "Short-Video Hook Surgery",
+    expert: "Aoi K.",
+    bio: "3 accounts past 1M followers · ex-ByteDance creator ops",
+    verified: true,
+    priceJpy: 85,
+    rating: 4.6,
+    calls: 1877,
+    category: "Marketing",
+    blurb: "First-2-seconds retention: what to cut, what to front-load, per platform.",
+  },
+  {
+    id: "s13",
+    name: "SaaS Churn Save Calls",
+    expert: "J. Rivera",
+    bio: "Ex-HubSpot retention lead · 38% save rate",
+    verified: true,
+    priceJpy: 110,
+    rating: 4.7,
+    calls: 529,
+    category: "Customer Success",
+    blurb: "The save-offer ladder, and the churn reasons you should let walk.",
+  },
+  {
+    id: "s14",
+    name: "Term Sheet Red Flags",
+    expert: "E. Goldberg",
+    bio: "Ex-Cooley associate · 300+ venture financings",
+    verified: true,
+    priceJpy: 200,
+    rating: 4.9,
+    calls: 388,
+    category: "Legal · Fundraising",
+    blurb: "Participating preferred, tripwire covenants, board-control math — flagged in seconds.",
+  },
+  {
+    id: "s15",
+    name: "Semiconductor Vendor Qualification",
+    expert: "H. Yamamoto",
+    bio: "30 yrs at Kyocera · retired process engineer, earning in retirement",
+    verified: true,
+    priceJpy: 160,
+    rating: 5.0,
+    calls: 241,
+    category: "Manufacturing",
+    blurb:
+      "Supplier audit judgment no datasheet carries: what a clean fab smells like.",
+  },
+  {
+    id: "s16",
+    name: "Restaurant Menu Engineering (JP)",
+    expert: "T. Ogawa",
+    bio: "3 Michelin-listed openings · Osaka native",
+    verified: true,
+    priceJpy: 60,
+    rating: 4.6,
+    calls: 962,
+    category: "Hospitality",
+    blurb: "Price anchors, star-dog matrix, seasonal rotation for JP diners.",
+  },
+  {
+    id: "s17",
+    name: "Crypto Listing Compliance (JP)",
+    expert: "M. Suzuki",
+    bio: "Ex-bitFlyer listing committee · JVCEA rulebook",
+    verified: true,
+    priceJpy: 150,
+    rating: 4.8,
+    calls: 414,
+    category: "Web3 · Japan",
+    blurb: "What the self-regulator actually rejects, and how to pre-empt it.",
+  },
+  {
+    id: "s18",
+    name: "Game Economy Balancing",
+    expert: "F. Dubois",
+    bio: "Ex-Ubisoft economist · 5 live-ops titles",
+    verified: true,
+    priceJpy: 120,
+    rating: 4.7,
+    calls: 806,
+    category: "Gaming",
+    blurb: "Sink/faucet audits before your currency inflates into meaninglessness.",
+  },
+  {
+    id: "s19",
+    name: "ESL Pitch Coaching for Founders",
+    expert: "N. Okonkwo",
+    bio: "Pitch coach to 40+ accelerator-batch founders",
+    verified: true,
+    priceJpy: 75,
+    rating: 4.8,
+    calls: 1093,
+    category: "Communications",
+    blurb: "Your 2-minute pitch, rewritten for rhythm a jury remembers.",
+  },
 ];
 
 const MINTED_SKILL: Skill = {
   id: "s7",
   name: "取適法 Payment-Terms Compliance",
   expert: "K. Watanabe",
+  bio: "JP commercial compliance consultant · 18 yrs · 下請法/取適法",
   verified: true,
   priceJpy: 140,
   rating: 5.0,
@@ -440,7 +601,9 @@ export function DemoProvider({ children }: { children: React.ReactNode }) {
   const [ready, setReady] = React.useState(false);
   useEffect(() => {
     try {
-      const raw = localStorage.getItem("expertos-demo-state");
+      // v3: catalog expanded to 19 skills + bios — older snapshots would
+      // resurrect the 6-skill store, so they're orphaned by the key bump
+      const raw = localStorage.getItem("expertos-demo-state-v3");
       if (raw) dispatch({ id: rid(), t: "hydrate", snap: JSON.parse(raw) });
     } catch {}
     setReady(true);
@@ -448,7 +611,7 @@ export function DemoProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!ready) return;
     try {
-      localStorage.setItem("expertos-demo-state", JSON.stringify(state));
+      localStorage.setItem("expertos-demo-state-v3", JSON.stringify(state));
     } catch {}
   }, [ready, state]);
 
@@ -475,7 +638,7 @@ export function DemoProvider({ children }: { children: React.ReactNode }) {
     if (!state.ambient) return;
     const t = setInterval(() => {
       if (document.visibilityState !== "visible") return;
-      const pool = ["s2", "s4", "s6", "s3"];
+      const pool = ["s2", "s3", "s4", "s6", "s9", "s10", "s11", "s12", "s13", "s16", "s18", "s19"];
       send({
         t: "ambient",
         skillId: pool[Math.floor(Math.random() * pool.length)],

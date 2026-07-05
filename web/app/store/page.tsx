@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useDemo, yen, HERO_ANSWER, GAP_QUERY } from "@/lib/demo";
 import type { Skill, HumanTaskStatus } from "@/lib/demo";
+import { Avatar } from "@/components/avatar";
 
 function SkillCard({ s, hero, invoking, answerShown }: {
   s: Skill;
@@ -22,19 +23,26 @@ function SkillCard({ s, hero, invoking, answerShown }: {
         </span>
       )}
       <div className="flex items-start justify-between gap-3">
-        <div>
+        <div className="flex-1">
+          <div className="kicker !text-[9px] !tracking-[0.22em] mb-1">{s.category}</div>
           <div className="font-bold leading-snug text-[15.5px]">{s.name}</div>
-          <div className="meta text-[11px] text-dim mt-1.5">
-            {s.expert}{" "}
-            {s.verified && <span className="text-green">✓ VERIFIED</span>} ·{" "}
-            {s.category.toUpperCase()}
-          </div>
         </div>
         {!s.isNew && (
           <span className="chip bg-violet/10 text-violet border border-violet/30 shrink-0">
             🔒 encrypted
           </span>
         )}
+      </div>
+
+      <div className="flex items-center gap-3">
+        <Avatar id={s.id} name={s.expert} size={hero ? 46 : 38} />
+        <div className="min-w-0">
+          <div className="text-[13px] font-bold leading-tight">
+            {s.expert}{" "}
+            {s.verified && <span className="text-green text-[11px]">✓</span>}
+          </div>
+          <div className="text-[11.5px] text-dim leading-snug truncate">{s.bio}</div>
+        </div>
       </div>
 
       <p className="text-[13px] text-dim leading-relaxed">{s.blurb}</p>
