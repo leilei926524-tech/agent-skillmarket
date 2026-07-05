@@ -108,10 +108,11 @@ type Ev =
 /* ─────────────────────────── seed data ─────────────────────────── */
 
 export const HERO_ANSWER = [
-  "Do not auto-approve 35%.",
-  "Counter at 25% max, contingent on a 24-month prepaid term.",
-  "Below ¥8M ACV → VP-Sales sign-off required; at ¥8M+ this sits within desk authority under the volume-discount policy.",
-  "Trade requirements: multi-year + annual prepay + case-study rights.",
+  "Recommendation: do not auto-approve 35%.",
+  "Ceiling is 25%, and only against a 24-month prepaid term — every point above 25% is roughly 1.8pts of gross margin, so it gets traded, never given away.",
+  "Policy gate: below ¥8M ACV this needs VP-Sales sign-off; at ¥8M+ it sits within desk authority under the volume-discount rule.",
+  "Required trades for any exception: multi-year commit + annual prepay + case-study rights.",
+  "Escalate only if the account is flagged strategic; otherwise hold the line at 25%.",
 ].join(" ");
 
 export const GAP_QUERY =
@@ -129,7 +130,7 @@ const SKILLS0: Skill[] = [
     calls: 1284,
     category: "Sales · Deal Desk",
     blurb:
-      "Discount-exception guardrails from a working financial analyst: approval tiers, trade conditions, escalation thresholds.",
+      "Deal-desk discount judgment from a working financial analyst: approval tiers, margin-based counter ceilings, the exact trades to demand, and when to escalate versus hold the line.",
   },
   {
     id: "s2",
