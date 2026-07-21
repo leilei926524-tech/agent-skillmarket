@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { api } from "@/lib/live";
+import { API_BASE, api } from "@/lib/live";
 import { useI18n, type TranslationKey } from "@/lib/i18n";
 
 type Stats = { skills: number; submissions: number; settledInvocations: number; network: string; mode: string };
@@ -80,7 +80,7 @@ export default function Landing() {
           <div><div className="kicker !text-[9px] mb-2">{t("home.trust.title")}</div><p className="max-w-3xl text-sm leading-relaxed">{t("home.trust.body")}</p></div>
           <div className="flex flex-wrap gap-3">
             <Link href="/store" className="btn-ink">{t("home.browse")}</Link>
-            <Link href="/.well-known/agent-skills.json" className="btn-outline mono text-xs">{t("home.manifest")}</Link>
+            <a href={`${API_BASE}/.well-known/agent-skills.json`} className="btn-outline mono text-xs">{t("home.manifest")}</a>
           </div>
         </div>
       </section>
