@@ -18,6 +18,15 @@ assert(health.response.status === 200 && health.body.ok === true, "health endpoi
 
 const catalog = await json("/api/v1/skills");
 assert(catalog.response.status === 200 && Array.isArray(catalog.body.skills) && catalog.body.skills.length >= 3, "catalog is not backed by seeded skills");
+const curated = catalog.body.skills.filter((skill: Record<string, any>) => skill.provenance?.listingKind === "curated");
+assert(curated.length >= 12, "curated source catalog is missing reviewed listings");
+assert(curated.every((skill: Record<string, any>) => (
+  skill.delivery?.type === "external_source"
+  && skill.delivery?.callable === false
+  && skill.invokeUrl === null
+  && /^https:\/\/github\.com\//.test(skill.provenance?.source?.url || "")
+  && /^[0-9a-f]{40}$/.test(skill.provenance?.source?.commit || "")
+)), "curated catalog provenance or delivery boundary is invalid");
 
 const agent = await json("/api/v1/agents/access", {
   method: "POST",
@@ -38,6 +47,13 @@ const recommendation = await json("/api/v1/agent/recommend", {
   body: JSON.stringify({ task: "Check whether a proposed enterprise software discount is within sales guardrails.", maxPriceUsd: 0.01 }),
 });
 assert(recommendation.response.status === 200 && recommendation.body.recommendations?.length > 0, "agent recommendation failed");
+
+const sourceOnly = await json(`/api/v1/skills/${curated[0].slug}/invoke`, {
+  method: "POST",
+  headers: { ...auth, "Idempotency-Key": crypto.randomUUID() },
+  body: JSON.stringify({ task: "This path must stop before payment." }),
+});
+assert(sourceOnly.response.status === 409 && sourceOnly.body.error?.code === "source_only_skill", "curated source entered the paid invocation path");
 
 const malicious = await json("/api/v1/submissions", {
   method: "POST",
@@ -71,6 +87,6 @@ if (expectedPayTo) assert(challenge.accepts[0].payTo.toLowerCase() === expectedP
 console.log(JSON.stringify({
   ok: true,
   baseUrl,
-  checks: ["health", "durable catalog", "agent access", "recommendation", "submission security rejection", "x402 v2 challenge"],
+  checks: ["health", "durable catalog", "curated provenance", "source-only payment isolation", "agent access", "recommendation", "submission security rejection", "x402 v2 challenge"],
   payment: { network: challenge.accepts[0].network, amount: challenge.accepts[0].amount, asset: challenge.accepts[0].asset, payTo: challenge.accepts[0].payTo },
 }, null, 2));

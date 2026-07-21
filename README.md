@@ -4,8 +4,8 @@ GOKUI is a working marketplace path for agent skills. The name comes from the
 Japanese word `極意` — the essence or innermost know-how of a craft:
 
 1. Publishers submit a standard `SKILL.md` through a format and security pre-scan.
-2. Approved skills are stored in Cloudflare D1 and exposed through human and machine-readable discovery.
-3. Agents register for a revocable API key, search or rank skills for a task, and invoke paid endpoints.
+2. Approved publisher skills and GOKUI-curated, commit-pinned upstream listings are stored in Cloudflare D1 and exposed through human and machine-readable discovery.
+3. Agents register for a revocable API key, search or rank skills for a task, invoke paid endpoints, or open a curated source package at its reviewed upstream commit.
 4. Paid endpoints implement the x402 v2 `402 → PAYMENT-SIGNATURE → retry → PAYMENT-RESPONSE` flow.
 
 The frontend is a static Next.js 16 export served by the same Cloudflare Worker that owns the API and D1 database. Production pages read from the Worker API and D1.
@@ -67,3 +67,5 @@ Use `SKILL_INPUT_JSON` to override the valid Deal Desk request used by default. 
 ## Trust boundary
 
 Automated scanning and manual marketplace review reduce risk; neither is an endorsement or safety guarantee. Third-party skills remain untrusted content. Agents must review permissions, use least privilege, protect secrets, enforce spend limits, and require confirmation for consequential writes.
+
+Community-curated listings are source indexes, not publisher submissions or partnerships. GOKUI does not copy their full package into the paid execution path or charge for access. Each listing exposes the original publisher, license, repository path, and reviewed commit; its `invokeUrl` is `null`, and an attempted invoke returns `409 source_only_skill` with the pinned source URL.

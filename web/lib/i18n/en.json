@@ -74,7 +74,7 @@
   "store.perInvoke": "/ invoke",
   "store.settled": "settled",
   "store.approvedTitle": "What “approved” means:",
-  "store.approvedBody": "the manifest passed automated format and heuristic checks, and a marketplace reviewer accepted the listing. Approval is not a warranty or endorsement. Inspect third-party instructions and permissions before use.",
+  "store.approvedBody": "paid skills passed format, heuristic, and marketplace review. Community picks are separately reviewed, pinned source links—not publisher submissions or paid GOKUI endpoints. Neither label is a warranty; inspect instructions and permissions before use.",
   "submit.kicker": "AI-assisted publishing · GOKUI",
   "submit.hero1": "Create with AI.",
   "submit.hero2": "Publish in minutes.",

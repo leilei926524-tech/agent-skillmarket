@@ -1,91 +1,164 @@
-# GOKUI differential review — 2026-07-22
+# GOKUI curated catalog differential security review
+
+Review date: 2026-07-22
+Baseline: `bf5e212`
+Review target: working tree before commit
 
 ## Executive summary
 
-| Severity | Count |
-|---|---:|
-| Critical | 0 |
-| High | 0 |
-| Medium | 0 |
-| Low / follow-up | 2 |
+| Severity | Open | Resolved during review |
+|---|---:|---:|
+| Critical | 0 | 0 |
+| High | 0 | 0 |
+| Medium | 0 | 1 |
+| Low | 0 | 0 |
 
-**Overall risk:** low
-**Recommendation:** conditional approve after a clean final build and publication verification
+**Overall implementation risk:** Medium because this change modifies D1 schema, public catalog contracts, and the pre-x402 invocation path.
+**Recommendation:** Conditional before deployment; approve after the remote migration, production smoke test, and online UI checks pass.
 
-The change is frontend-only. It does not modify Worker routes, authentication, D1 writes, x402 verification, payment settlement, secrets, or admin controls. The material additions are metadata, public trust pages, keyboard and form semantics, client-side Chinese search aliases, and fixed-origin BaseScan links.
+Key metrics:
+
+- 13 changed implementation/data/documentation files before this report.
+- 602 additions and 34 deletions, including a 329-line data migration.
+- 2 high-risk files reviewed deeply: `worker/src/index.ts` and `worker/migrations/0003_curated_catalog.sql`.
+- 3 direct `publicSkill()` consumers checked.
+- 12/12 pinned upstream URLs returned HTTP 200.
+- 1 pre-existing idempotency ordering issue found and fixed during review.
 
 ## What changed
 
-**Baseline:** `23f3483` (`Fix Agent manifest link for static mirrors`)
-**Review range:** baseline working tree to current local changes
-**Strategy:** deep review; the changed production scope is small and all changed frontend files were read
+| File | Risk | Behavioral effect | Blast radius |
+|---|---|---|---|
+| `worker/migrations/0003_curated_catalog.sql` | High | Adds delivery/provenance fields and 12 curated rows | All catalog reads after migration |
+| `worker/src/index.ts` | High | Rejects source-only invokes before payment and binds idempotency keys to skill IDs | One public invoke endpoint |
+| `worker/src/utils.ts` | Medium | Exposes delivery and provenance; fails closed for non-`paid_api` values | 3 API response paths |
+| `worker/src/types.ts` | Medium | Adds the D1 record contract | Worker compile-time consumers |
+| `web/lib/live.ts` | Medium | Adds public delivery/provenance types | Store, detail, recommendation UI |
+| `web/app/store/page.tsx` | Medium | Separates paid APIs from curated source listings | Catalog page |
+| `web/app/skill/page.tsx` | Medium | Replaces payment controls with source provenance for curated listings | Skill detail page |
+| `web/app/agents/page.tsx` | Low | Labels source recommendations honestly | Recommendation cards |
+| `scripts/smoke.ts` | Medium | Blocks deployment if provenance or payment isolation fails | Production smoke workflow |
+| `README.md`, curation report, EN/ZH copy | Low | Documents the new trust boundary | Public and maintainer documentation |
 
-| Area | Risk | Behavioral impact |
+## Resolved finding
+
+### Medium: an old idempotency replay could run before the new source-only boundary
+
+**File:** `worker/src/index.ts` invoke middleware
+**Historical context:** the original ordering was introduced in `c7127ea`. It queried a prior invocation by `(agent_id, idempotency_key)` and returned a settled replay before loading the requested skill.
+
+**Attacker model:** an authenticated agent that already owns a settled invocation and its idempotency key.
+
+**Attack sequence before the fix:**
+
+1. The agent makes and settles a paid invocation for Skill A.
+2. The same agent calls a curated source-only Skill B with Skill A's idempotency key.
+3. The old middleware returns Skill A's cached result before it loads Skill B.
+4. The request bypasses the new `source_only_skill` response.
+
+The result belonged to the same agent, so this was not a cross-tenant disclosure or a payment bypass for new execution. It did violate endpoint identity and the new guarantee that curated slugs never enter invocation handling.
+
+**Fix applied:** the middleware now loads the requested skill first, rejects every non-`paid_api` delivery before x402, selects `skill_id` with any prior idempotent record, and returns `409 idempotency_key_reused` when the key belongs to another skill.
+
+**Status:** resolved in the reviewed diff.
+
+## Adversarial checks
+
+### Curated row submitted as a paid endpoint
+
+- **Entry point:** `POST /api/v1/skills/:slug/invoke`
+- **Control:** any present delivery value other than `paid_api` returns `409 source_only_skill` before budget calculation or x402 middleware.
+- **Result:** blocked locally with a valid agent key.
+
+### Malformed delivery value
+
+- **Entry point:** a bad D1 value such as `external-source`.
+- **Control:** both the public serializer and invoke middleware fail closed; the serializer presents it as external source and invoke rejects it.
+- **Result:** no implicit fallback to paid execution.
+
+### Third-party author represented as a partner
+
+- **Entry point:** public store/detail API and UI.
+- **Control:** `listingKind = curated`, `curatedBy = GOKUI`, `publisherVerified = false`, and explicit copy says the listing is not an author submission or partnership.
+- **Result:** original publisher is attribution, not a claim of marketplace participation.
+
+### Source URL script injection
+
+- **Entry point:** curated detail source link.
+- **Control:** the reviewed migration contains only explicit `https://github.com/` URLs, links use `target="_blank"` with `rel="noopener noreferrer"`, and public submissions cannot set provenance fields.
+- **Residual risk:** a future admin/data migration could insert a bad scheme. Add a database constraint or serializer URL validation before opening curated writes to admins.
+
+### Unreviewed third-party execution
+
+- **Entry point:** GOKUI paid invocation and fallback instruction runner.
+- **Control:** curated records are source-only, have `invokeUrl = null`, and are rejected before x402. Full upstream packages are not copied into `skill_markdown` or executed by GOKUI.
+- **Result:** the new catalog expansion does not broaden the paid runtime's third-party execution surface.
+
+## Test coverage
+
+| Invariant | Evidence | Result |
 |---|---|---|
-| Route metadata, robots, sitemap | Low | Points search engines to the GitHub Pages frontend; query Skill pages and payment activity are not indexed |
-| Privacy, terms, security contact | Low | Publishes factual beta disclosures and fixed GitHub contact links |
-| Navigation and forms | Low | Adds focus, names, autocomplete, and live-region semantics |
-| Store aliases | Low | Maps three fixed Chinese intent groups to existing catalog terms in the browser |
-| Payment receipt link | Low | Builds a BaseScan URL from a backend transaction hash under a fixed trusted origin |
-| Color token | Low | Improves text and focus contrast; decorative HTTP 402 gradient remains unchanged |
+| 3 paid + 12 curated rows | Local D1 query through `/api/v1/skills` | Pass |
+| Curated provenance complete | API assertion: GitHub URL + 40-char commit + source path | Pass |
+| Curated invoke cannot reach payment | Authenticated local request returns `409 source_only_skill` | Pass |
+| Existing paid path remains distinct | Detail page retains x402 contract only for paid API | Pass; production smoke still required |
+| Public types compile | `bun run typecheck` | Pass |
+| Static site builds | `bun run build` including Wrangler dry run | Pass |
+| Public copy scan | `bun run copy:check` | Pass |
+| Desktop UI | 1440 px Playwright snapshot and screenshot | Pass |
+| Mobile UI | 390 px, no horizontal overflow | Pass |
+| Empty search | 390 px Playwright flow | Pass |
+| Curated high-risk detail | No API-key input; one pinned source link | Pass |
 
-## Baseline invariants and trust boundaries
+The repository-wide i18n parity check still fails because 58 non-English/non-Chinese dictionaries were already missing legal and accessibility keys at baseline `bf5e212`. All 60 JSON dictionaries parse, this diff adds no translation key, and the user explicitly deferred the 60-language copy pass. This is a pre-existing release-quality limitation, not a regression from the curated catalog.
 
-1. The static frontend may read public Worker APIs but cannot authenticate, settle, approve, or mutate records without the existing API flows.
-2. Agent API keys remain in component memory unless the user copies them; no new persistence or logging was added.
-3. Submission status tokens remain in `sessionStorage`; the server stores only their hashes.
-4. Prices, settlement status, network, and transaction hashes remain server-sourced.
-5. Public content must not describe a scan as an endorsement or promise creator payouts that do not exist.
-6. External navigation must use a fixed `https` origin and `rel="noreferrer"` when opening a new tab.
+## Blast radius
 
-The diff preserves all six invariants.
+- `publicSkill()` has three callers: public list, public detail, and agent recommendation.
+- The invoke middleware is the sole paid execution entry point; its source-only check runs before the x402 middleware.
+- The D1 migration changes every `SELECT * FROM skills` record but uses defaults that preserve existing GOKUI rows as paid APIs.
+- Store/detail/agent UI consumers were updated together with the public API type, so there is no known stale internal caller.
 
-## Adversarial review
+## Historical context
 
-### Fixed-origin transaction links
+- No authorization, payment, budget, or input-validation check was removed.
+- The original three runner implementations and x402 middleware were not changed.
+- The existing idempotency behavior came from the first marketplace implementation (`c7127ea`) and was tightened rather than relaxed.
+- No security-fix or CVE-related code was reintroduced.
 
-**Attacker model:** a malicious or corrupted public activity row controls `tx_hash` and `network`.
-**Entry point:** `/api/v1/public/activity` rendered by `/console/`.
-**Analysis:** the value is appended to a hard-coded `https://basescan.org/tx/` or `https://sepolia.basescan.org/tx/` path and rendered by React. It cannot select a new scheme or host, and React escapes displayed text. A malformed hash can create a broken explorer URL but not script execution or an open redirect.
-**Result:** no exploitable security regression found.
+## Recommendations
 
-### Search alias input
+### Blocking before production
 
-**Attacker model:** an unauthenticated storefront visitor controls the search string.
-**Entry point:** local React state on `/store/`.
-**Analysis:** fixed regular expressions select fixed English tokens, and matching occurs against already-rendered text. The query is not inserted as HTML, executed, or sent to a new endpoint.
-**Result:** no injection or data-exposure path found.
+- [ ] Apply `0003_curated_catalog.sql` to remote D1 before deploying code that reads the new fields.
+- [ ] Run the updated production smoke test and confirm the existing x402 endpoint still returns a valid v2 challenge.
+- [ ] Verify the public catalog reports 15 total, 3 paid, 12 curated, and zero missing source URLs.
+- [ ] Check `/store` and one curated `/skill` page at desktop and 390 px on the public URL.
 
-### Public trust/contact links
+### Follow-up
 
-**Attacker model:** a visitor follows a public external link.
-**Analysis:** ChatGPT, OpenAI Help, GitHub Security Advisories, and BaseScan links use fixed HTTPS origins and `noreferrer`. No user value controls their host.
-**Result:** no open redirect or opener-control path found.
+- [ ] Add URL-scheme validation if provenance becomes writable through the admin API.
+- [ ] Add an upstream-update job that opens a review request rather than silently moving pinned commits.
+- [ ] Resolve the pre-existing 58-locale parity backlog in a separate pass.
 
-## Test coverage analysis
+## Methodology and limits
 
-No repository unit or automated accessibility suite covers these UI changes. This is the main coverage limitation, but the changed logic is low risk and received browser-level checks:
+**Strategy:** deep review for a small TypeScript/SQL change with high-risk payment and state boundaries.
 
-- optimized Next.js static build and TypeScript validation;
-- desktop and 390px route inspection;
-- metadata, canonical, H1, and overflow checks;
-- keyboard skip-link and language-dialog focus checks;
-- three multilingual search cases;
-- mocked HTTP 503 and recovery;
-- live Worker reads and BaseScan receipt rendering.
+Techniques used:
 
-## Low-priority findings
+- Baseline history and blame on invocation middleware.
+- Full diff review and removed-validation scan.
+- Call-site and blast-radius search.
+- Adversarial modeling for payment isolation, provenance, URL handling, and idempotency.
+- Static package scan of all accepted upstream directories for executable files, destructive commands, credential handling, external fetches, and instruction-override indicators.
+- Local API, browser, desktop/mobile, and failure-path QA.
 
-1. **Agent-side multilingual relevance is still incomplete.** The storefront aliases do not change `/api/v1/agent/recommend`; a Chinese Agent task can still fall back to popularity/risk. Add catalog-level synonyms or a tested semantic retrieval layer before claiming multilingual Agent discovery.
-2. **No automated regression suite exists.** Convert the browser checks into a small committed test only after the public deployment workflow and canonical frontend repository are consolidated; otherwise the test would encode the current two-repository publishing split.
+Limits:
 
-## Recommendation
+- This was not a formal malware analysis of every upstream reference file.
+- A risk label applies only to the pinned reviewed commit.
+- GitHub publisher identity and license files were inspected, but GOKUI has no partnership or identity-verification relationship with these publishers.
+- Production migration and online verification were pending when this report was first written.
 
-No critical, high, or medium blocker was found in the local diff. Approve the implementation after:
-
-1. a clean final production-style build;
-2. confirmation that the publishing task is no longer writing the same frontend files;
-3. publication to the actual GitHub Pages source repository;
-4. two HTTPS 200 checks plus visual/metadata verification on the public URL.
-
-Do not describe the local change as deployed until all four conditions are satisfied.
+**Confidence:** high for GOKUI payment/provenance isolation; medium for the behavior of third-party packages after users install them outside GOKUI.

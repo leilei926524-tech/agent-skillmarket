@@ -40,6 +40,12 @@ export type SkillRecord = {
   invokes: number;
   created_at: string;
   updated_at: string;
+  delivery_type?: "paid_api" | "external_source";
+  listing_kind?: "platform" | "publisher" | "curated";
+  publisher_verified?: number;
+  source_url?: string | null;
+  source_commit?: string | null;
+  source_path?: string | null;
 };
 
 export type Variables = {

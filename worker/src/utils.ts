@@ -65,6 +65,9 @@ export class BodyError extends Error {
 
 export function publicSkill(skill: import("./types").SkillRecord, origin: string) {
   const publisher = skill.publisher_name === "ExpertOS Labs" ? "GOKUI Labs" : skill.publisher_name;
+  const deliveryType = skill.delivery_type && skill.delivery_type !== "paid_api" ? "external_source" : "paid_api";
+  const listingKind = skill.listing_kind || (publisher === "GOKUI Labs" ? "platform" : "publisher");
+  const invokeUrl = deliveryType === "paid_api" ? `${origin}/api/v1/skills/${skill.slug}/invoke` : null;
   return {
     id: skill.id,
     slug: skill.slug,
@@ -78,7 +81,23 @@ export function publicSkill(skill: import("./types").SkillRecord, origin: string
     price: { amount: skill.price_usd, currency: "USDC", network: "Base" },
     risk: { level: skill.risk_level, summary: skill.risk_summary },
     invokes: skill.invokes,
-    invokeUrl: `${origin}/api/v1/skills/${skill.slug}/invoke`,
+    invokeUrl,
+    delivery: {
+      type: deliveryType,
+      callable: deliveryType === "paid_api",
+    },
+    provenance: {
+      listingKind,
+      curatedBy: listingKind === "curated" ? "GOKUI" : null,
+      publisherVerified: Boolean(skill.publisher_verified),
+      source: skill.source_url
+        ? {
+            url: skill.source_url,
+            commit: skill.source_commit || null,
+            path: skill.source_path || null,
+          }
+        : null,
+    },
     updatedAt: skill.updated_at,
   };
 }

@@ -8,7 +8,7 @@ type Access = { agent: { id: string; name: string; dailyBudgetUsd: string }; api
 type Recommendation = { task: string; recommendations: { rank: number; score: number; reason: string; skill: PublicSkill }[]; rankingDisclosure: string };
 
 export default function Agents() {
-  const { t } = useI18n();
+  const { locale, t } = useI18n();
   const [form, setForm] = useState({ name: "", ownerEmail: "", purpose: "", dailyBudgetUsd: "1.00" });
   const [access, setAccess] = useState<Access | null>(null);
   const [key, setKey] = useState("");
@@ -77,7 +77,7 @@ export default function Agents() {
                 <div className="flex justify-between"><span className="mono text-3xl font-bold text-violet">0{item.rank}</span><span className="chip bg-white/50 border border-line">{t("common.score")} {item.score}</span></div>
                 <h2 className="font-bold text-lg mt-4">{item.skill.title}</h2>
                 <p className="text-sm text-dim mt-2 leading-relaxed">{item.reason}</p>
-                <a href={`/skill?slug=${encodeURIComponent(item.skill.slug)}`} className="btn-outline mt-5">{t("common.viewInvoke")}</a>
+                <a href={`/skill?slug=${encodeURIComponent(item.skill.slug)}`} className="btn-outline mt-5">{item.skill.delivery.callable ? t("common.viewInvoke") : (locale === "zh-CN" ? "查看固定源码" : "View pinned source")}</a>
               </div>
             ))}
           </div>

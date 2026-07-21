@@ -49,6 +49,10 @@ app.get("/.well-known/agent-skills.json", (c) => {
       amountUsd: c.env.X402_PRICE_USD,
       headers: ["PAYMENT-REQUIRED", "PAYMENT-SIGNATURE", "PAYMENT-RESPONSE"],
     },
+    catalog: {
+      deliveryTypes: ["paid_api", "external_source"],
+      disclosure: "Paid APIs run behind x402. Community-curated source packages open a pinned upstream version and are not sold by GOKUI.",
+    },
     safety: "Automated checks reduce risk but are not an endorsement. Review third-party skills and permissions before use.",
   });
 });
@@ -284,9 +288,23 @@ app.post(
     if (!/^[A-Za-z0-9._:-]{8,128}$/.test(key)) {
       return jsonError(c, 400, "idempotency_key_required", "Provide an 8–128 character Idempotency-Key.");
     }
+    const skill = await c.env.DB.prepare(
+      "SELECT * FROM skills WHERE slug = ? AND status = 'approved'",
+    ).bind(c.req.param("slug")).first<SkillRecord>();
+    if (!skill) return jsonError(c, 404, "skill_not_found", "No approved skill uses that slug.");
+    if (skill.delivery_type && skill.delivery_type !== "paid_api") {
+      return jsonError(c, 409, "source_only_skill", "This community-curated listing is installed from its pinned upstream source; it is not a paid GOKUI endpoint.", {
+        sourceUrl: skill.source_url,
+        sourceCommit: skill.source_commit,
+      });
+    }
+    c.set("skill", skill);
     const existing = await c.env.DB.prepare(
-      "SELECT request_hash, output_json, status, tx_hash, amount_usd, network FROM invocations WHERE agent_id = ? AND idempotency_key = ?",
+      "SELECT skill_id, request_hash, output_json, status, tx_hash, amount_usd, network FROM invocations WHERE agent_id = ? AND idempotency_key = ?",
     ).bind(c.get("agent").id, key).first<Record<string, string>>();
+    if (existing && existing.skill_id !== skill.id) {
+      return jsonError(c, 409, "idempotency_key_reused", "This idempotency key already belongs to a different skill invocation.");
+    }
     if (existing?.status === "settled") {
       c.header("X-Idempotent-Replay", "true");
       return c.json({
@@ -296,11 +314,6 @@ app.post(
       });
     }
     if (existing) return jsonError(c, 409, "invocation_in_progress", "This idempotency key already belongs to an unfinished invocation.");
-    const skill = await c.env.DB.prepare(
-      "SELECT * FROM skills WHERE slug = ? AND status = 'approved'",
-    ).bind(c.req.param("slug")).first<SkillRecord>();
-    if (!skill) return jsonError(c, 404, "skill_not_found", "No approved skill uses that slug.");
-    c.set("skill", skill);
     const spent = await c.env.DB.prepare(
       "SELECT COALESCE(SUM(CAST(amount_usd AS REAL)), 0) AS total FROM invocations WHERE agent_id = ? AND status = 'settled' AND created_at >= datetime('now', 'start of day')",
     ).bind(c.get("agent").id).first<{ total: number }>();

@@ -74,7 +74,7 @@
   "store.perInvoke": "/ 次",
   "store.settled": "次调用已付款",
   "store.approvedTitle": "为什么会出现在这里？",
-  "store.approvedBody": "它已经通过格式检查和人工上架审核。我们会筛掉明显问题，但不会替你担保；调用前请看清说明、权限和风险提示。",
+  "store.approvedBody": "付费 Skill 通过格式、安全规则和人工上架审核；社区精选则是我们审过并固定版本的上游链接，不代表作者入驻，也不会由 GOKUI 代售。两种标签都不是安全担保，使用前仍要看清说明、权限和风险。",
   "submit.kicker": "不用学格式，先跟 AI 聊",
   "submit.hero1": "告诉 AI 你会什么。",
   "submit.hero2": "它帮你写成 Skill。",

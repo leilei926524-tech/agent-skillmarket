@@ -11,7 +11,14 @@ export type PublicSkill = {
   price: { amount: string; currency: string; network: string };
   risk: { level: string; summary: string };
   invokes: number;
-  invokeUrl: string;
+  invokeUrl: string | null;
+  delivery: { type: "paid_api" | "external_source"; callable: boolean };
+  provenance: {
+    listingKind: "platform" | "publisher" | "curated";
+    curatedBy: string | null;
+    publisherVerified: boolean;
+    source: { url: string; commit: string | null; path: string | null } | null;
+  };
   updatedAt: string;
 };
 
