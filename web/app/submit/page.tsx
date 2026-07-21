@@ -41,7 +41,7 @@ function inferListing(markdown: string) {
 }
 
 function aiPrompt(locale: string, language: string) {
-  if (locale === "zh-CN") return `任务：帮我创建一份可提交到 ExpertOS 的 Agent 技能文件（SKILL.md）。
+  if (locale === "zh-CN") return `任务：帮我创建一份可提交到 GOKUI 的 Agent 技能文件（SKILL.md）。
 
 我不了解技术格式。请一次只问我一个简单问题，把我的经验或工作流程整理成一个可复用的 Agent 技能。
 
@@ -69,7 +69,7 @@ metadata:
 
 正文至少包含：适用范围、前置条件、工作流程、输入与输出、安全与限制、失败处理、示例。不要安装或执行这个技能，只负责和我一起完成文件。`;
 
-  return `Task: Help me create an agent skill file (SKILL.md) for submission to ExpertOS.
+  return `Task: Help me create an agent skill file (SKILL.md) for submission to GOKUI.
 
 I do not know the technical format. Interview me with one simple question at a time, then turn my experience or workflow into a reusable agent skill. Conduct the interview and write the skill instructions in ${language}.
 
@@ -165,7 +165,7 @@ export default function SubmitSkill() {
     try {
       const result = await api<Receipt>("/api/v1/submissions", { method: "POST", body: JSON.stringify({ ...form, categories: form.categories.split(",").map((value) => value.trim()).filter(Boolean), usageExamples: form.usageExamples.split("\n").map((value) => value.trim()).filter(Boolean) }) });
       setReceipt(result);
-      sessionStorage.setItem(`expertos-submission-${result.submission.id}`, result.statusToken);
+      sessionStorage.setItem(`gokui-submission-${result.submission.id}`, result.statusToken);
     } catch (caught) {
       const typed = caught as Error & { data?: unknown }; setError(typed.message); setDetails(typed.data || null);
     } finally { setBusy(false); }

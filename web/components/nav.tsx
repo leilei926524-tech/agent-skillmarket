@@ -32,7 +32,7 @@ export function Nav() {
     <header className="sticky top-0 z-40 bg-background/90 border-b border-line backdrop-blur-sm">
       <div className="mx-auto max-w-[1360px] px-4 md:px-6 min-h-14 flex items-center gap-3 md:gap-4">
         <Link href="/" className="font-extrabold tracking-tight text-[17px] shrink-0">
-          EXPERTOS<span className="text-violet">.</span>
+          GOKUI<span className="text-violet">.</span>
         </Link>
         <nav className="nav-scroll flex items-center gap-3 md:gap-5 meta text-[9.5px] md:text-[11.5px] overflow-x-auto py-4" aria-label={t("nav.primary")}>
           {NAV.map((item) => {
@@ -58,7 +58,7 @@ export function Footer() {
   return (
     <footer className="border-t border-line mt-14">
       <div className="mx-auto max-w-[1360px] px-6 py-5 flex flex-wrap items-center justify-between gap-3 meta text-[10.5px] text-dim">
-        <span>EXPERTOS © 2026 · {t("footer.marketplace")}</span>
+        <span>GOKUI © 2026 · {t("footer.marketplace")}</span>
         <span>{t("footer.stack")}</span>
         <span>{t("footer.disclaimer")}</span>
       </div>

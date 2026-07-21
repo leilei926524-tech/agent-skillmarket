@@ -15,24 +15,24 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://expertos-agent-skillmarket.1924902988hu.workers.dev"),
-  title: "ExpertOS — Make your AI work smarter",
+  metadataBase: new URL("https://gokui.mesalaunch.com"),
+  title: "GOKUI — Make your AI work smarter",
   description:
     "Reuse the latest skills from domain experts to make your AI work smarter.",
   openGraph: {
-    title: "ExpertOS — Make your AI work smarter",
+    title: "GOKUI — Make your AI work smarter",
     description: "Reuse the latest skills from domain experts to make your AI work smarter.",
     type: "website",
     images: [{
       url: "/og.png",
       width: 1734,
       height: 907,
-      alt: "ExpertOS — Reuse the latest skills from domain experts to make your AI work smarter.",
+      alt: "GOKUI — Reuse the latest skills from domain experts to make your AI work smarter.",
     }],
   },
   twitter: {
     card: "summary_large_image",
-    title: "ExpertOS — Make your AI work smarter",
+    title: "GOKUI — Make your AI work smarter",
     description: "Reuse the latest skills from domain experts to make your AI work smarter.",
     images: ["/og.png"],
   },

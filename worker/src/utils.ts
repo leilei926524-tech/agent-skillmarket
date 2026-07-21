@@ -64,6 +64,7 @@ export class BodyError extends Error {
 }
 
 export function publicSkill(skill: import("./types").SkillRecord, origin: string) {
+  const publisher = skill.publisher_name === "ExpertOS Labs" ? "GOKUI Labs" : skill.publisher_name;
   return {
     id: skill.id,
     slug: skill.slug,
@@ -73,7 +74,7 @@ export function publicSkill(skill: import("./types").SkillRecord, origin: string
     tags: parseJson<string[]>(skill.tags_json, []),
     version: skill.version,
     license: skill.license,
-    publisher: skill.publisher_name,
+    publisher,
     price: { amount: skill.price_usd, currency: "USDC", network: "Base" },
     risk: { level: skill.risk_level, summary: skill.risk_summary },
     invokes: skill.invokes,

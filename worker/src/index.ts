@@ -29,12 +29,12 @@ app.onError((error, c) => {
   return jsonError(c, 500, "internal_error", "The marketplace could not complete this request.");
 });
 
-app.get("/api/health", (c) => c.json({ ok: true, service: "expertos-marketplace", environment: c.env.APP_ENV }));
+app.get("/api/health", (c) => c.json({ ok: true, service: "gokui-marketplace", environment: c.env.APP_ENV }));
 
 app.get("/.well-known/agent-skills.json", (c) => {
   const origin = new URL(c.req.url).origin;
   return c.json({
-    name: "ExpertOS Agent Skill Marketplace",
+    name: "GOKUI Agent Skill Marketplace",
     version: "1.0.0",
     protocols: ["REST", "x402-v2"],
     access: {
@@ -210,7 +210,7 @@ app.post("/api/v1/agents/access", async (c) => {
     "SELECT COUNT(*) AS count FROM agents WHERE owner_email = ? AND created_at >= datetime('now', '-1 day')",
   ).bind(ownerEmail).first<{ count: number }>();
   if ((recent?.count || 0) >= 5) return jsonError(c, 429, "agent_limit", "This owner has reached the daily agent-key limit.");
-  const key = randomToken("exp_live");
+  const key = randomToken("gokui_live");
   const id = crypto.randomUUID();
   const createdAt = nowIso();
   await c.env.DB.prepare(

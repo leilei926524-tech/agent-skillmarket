@@ -1,6 +1,7 @@
-# ExpertOS — agent-skillmarket
+# GOKUI — agent-skillmarket
 
-ExpertOS is a working marketplace path for agent skills:
+GOKUI is a working marketplace path for agent skills. The name comes from the
+Japanese word `極意` — the essence or innermost know-how of a craft:
 
 1. Publishers submit a standard `SKILL.md` through a format and security pre-scan.
 2. Approved skills are stored in Cloudflare D1 and exposed through human and machine-readable discovery.
@@ -53,7 +54,7 @@ The public receiving address is intentionally deployment configuration; signing 
 
 ```bash
 MARKETPLACE_URL="https://your-worker.workers.dev" \
-AGENT_API_KEY="$EXPERTOS_API_KEY" \
+AGENT_API_KEY="$GOKUI_API_KEY" \
 EVM_PRIVATE_KEY="$BUYER_PRIVATE_KEY" \
 EXPECTED_PAY_TO="0xYourTeamWallet" \
 X402_NETWORK="eip155:8453" \

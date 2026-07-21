@@ -62,7 +62,7 @@ export default function Agents() {
 
         <div className="panel p-6">
           <div className="kicker !text-[9px] mb-5">{t("agents.recommendation")}</div>
-          <label className="label">{t("agents.apiKey")}<input type="password" className="field" value={key} onChange={(e) => setKey(e.target.value)} placeholder="exp_live_…" /></label>
+          <label className="label">{t("agents.apiKey")}<input type="password" className="field" value={key} onChange={(e) => setKey(e.target.value)} placeholder="gokui_live_…" /></label>
           <label className="label mt-4">{t("agents.task")}<textarea className="field min-h-32" value={task} onChange={(e) => { setTaskTouched(true); setTask(e.target.value); }} /></label>
           <button type="button" className="btn-ink mt-4" onClick={recommend} disabled={!key || task.length < 10}>{t("agents.find")}</button>
           {error && <div className="error-box mt-4">{error}</div>}
@@ -91,11 +91,11 @@ export default function Agents() {
 curl https://YOUR_HOST/.well-known/agent-skills.json
 
 # ${t("agents.quickstart.search")}
-curl -H "Authorization: Bearer $EXPERTOS_API_KEY" \\
+curl -H "Authorization: Bearer $GOKUI_API_KEY" \\
   "https://YOUR_HOST/api/v1/agent/skills?q=pricing"
 
 # ${t("agents.quickstart.invoke")}
-curl -i -X POST -H "Authorization: Bearer $EXPERTOS_API_KEY" \\
+curl -i -X POST -H "Authorization: Bearer $GOKUI_API_KEY" \\
   -H "Idempotency-Key: job-unique-001" \\
   -H "Content-Type: application/json" \\
   -d '{"discountPercent":25,"annualContractValueUsd":100000,"termMonths":24,"prepaid":true}' \\
