@@ -9,6 +9,10 @@ ExpertOS is a working marketplace path for agent skills:
 
 The frontend is a static Next.js 16 export served by the same Cloudflare Worker that owns the API and D1 database. Live mode never falls back to fabricated browser state.
 
+## Internationalization
+
+The interface ships as 60 static language packs: English plus the 59 languages in OpenAI's current [ChatGPT interface language list](https://help.openai.com/en/articles/8357869-how-to-change-your-language-setting-in-chatgpt). The site detects the browser preference on first visit, stores an explicit selection on the device, and supports right-to-left layout for Arabic, Persian, and Urdu. Skill listings, submitted Markdown, API payloads, and agent-generated results remain in their publisher-provided language so technical content is not silently altered.
+
 ## Local development
 
 ```bash
