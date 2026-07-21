@@ -59,7 +59,7 @@ export function Footer() {
     <footer className="border-t border-line mt-14">
       <div className="mx-auto max-w-[1360px] px-6 py-5 flex flex-wrap items-center justify-between gap-3 meta text-[10.5px] text-dim">
         <span>GOKUI © 2026 · {t("footer.marketplace")}</span>
-        <span>{t("footer.stack")}</span>
+        <Link href="/wallet" className="underline decoration-transparent underline-offset-4 hover:text-violet hover:decoration-violet">{t("footer.stack")}</Link>
         <span>{t("footer.disclaimer")}</span>
       </div>
     </footer>

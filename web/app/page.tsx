@@ -58,9 +58,9 @@ export default function Landing() {
         <div className="mx-auto max-w-[1360px] px-6 py-7 grid grid-cols-2 md:grid-cols-4 gap-6">
           {[
             { v: stats?.skills ?? "—", k: "home.stats.approved" as TranslationKey },
-            { v: stats?.submissions ?? "—", k: "home.stats.submissions" as TranslationKey },
             { v: stats?.settledInvocations ?? "—", k: "home.stats.invocations" as TranslationKey },
             { v: stats?.network === "eip155:8453" ? t("common.baseMainnet") : t("common.baseSepolia"), k: "home.stats.network" as TranslationKey },
+            { v: "x402 v2", k: "home.noSimulated" as TranslationKey },
           ].map((item) => <div key={item.k}><div className="mono text-3xl md:text-4xl font-bold">{item.v}</div><div className="kicker mt-2 !text-[9px]">{t(item.k)}</div></div>)}
         </div>
       </section>
@@ -78,7 +78,10 @@ export default function Landing() {
         </div>
         <div className="panel mt-10 p-5 md:p-7 flex flex-wrap gap-6 items-center justify-between">
           <div><div className="kicker !text-[9px] mb-2">{t("home.trust.title")}</div><p className="max-w-3xl text-sm leading-relaxed">{t("home.trust.body")}</p></div>
-          <Link href="/.well-known/agent-skills.json" className="btn-outline mono text-xs">{t("home.manifest")}</Link>
+          <div className="flex flex-wrap gap-3">
+            <Link href="/store" className="btn-ink">{t("home.browse")}</Link>
+            <Link href="/.well-known/agent-skills.json" className="btn-outline mono text-xs">{t("home.manifest")}</Link>
+          </div>
         </div>
       </section>
     </main>
