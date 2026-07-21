@@ -1,8 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import { DemoProvider } from "@/lib/demo";
-import { Nav, Toasts, KeyHints, ChartPaper, Footer } from "@/components/nav";
+import { Nav, ChartPaper, Footer } from "@/components/nav";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -15,9 +14,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "ExpertOS — Human Intelligence Layer for AI Agents",
+  title: "ExpertOS — Skills agents can discover and pay for",
   description:
-    "AI agents invoke encrypted expert skills instantly, or hire verified humans when no skill exists.",
+    "Submit reviewed agent skills, discover them through a machine-readable gate, and invoke them with x402 payments.",
 };
 
 export default function RootLayout({
@@ -32,13 +31,9 @@ export default function RootLayout({
     >
       <body className="min-h-full flex flex-col">
         <ChartPaper />
-        <DemoProvider>
-          <Nav />
-          <Toasts />
-          <div className="flex-1">{children}</div>
-          <Footer />
-          <KeyHints />
-        </DemoProvider>
+        <Nav />
+        <div className="flex-1">{children}</div>
+        <Footer />
       </body>
     </html>
   );

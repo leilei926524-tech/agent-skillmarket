@@ -104,6 +104,12 @@ body {
   letter-spacing: 0.08em;
   color: var(--foreground);
 }
+.nav-scroll {
+  scrollbar-width: none;
+}
+.nav-scroll::-webkit-scrollbar {
+  display: none;
+}
 .mono {
   font-family: var(--font-geist-mono), ui-monospace, monospace;
   font-variant-numeric: tabular-nums;
@@ -146,6 +152,78 @@ body {
   transition: transform 0.18s ease, background 0.18s ease;
 }
 .btn-ink:hover { transform: translateY(-2px); background: var(--violet); }
+.btn-ink:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }
+.btn-outline {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 1px solid var(--foreground);
+  border-radius: 999px;
+  padding: 9px 20px;
+  font-weight: 650;
+  font-size: 13px;
+  background: rgba(255, 255, 255, 0.42);
+  transition: transform 0.18s ease, background 0.18s ease;
+}
+.btn-outline:hover { transform: translateY(-2px); background: rgba(255, 255, 255, 0.9); }
+
+.label {
+  display: block;
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  font-weight: 650;
+}
+.field {
+  display: block;
+  width: 100%;
+  margin-top: 7px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 10px 12px;
+  background: rgba(255, 255, 255, 0.78);
+  color: var(--foreground);
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  font-size: 14px;
+  letter-spacing: normal;
+  outline: none;
+}
+.field:focus, .code-input:focus { border-color: var(--violet); box-shadow: 0 0 0 3px rgba(43, 99, 246, 0.14); }
+.code-input {
+  display: block;
+  width: 100%;
+  min-height: 540px;
+  margin-top: 7px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 14px;
+  background: rgba(14, 14, 20, 0.94);
+  color: #f5f7ff;
+  font: 12px/1.6 var(--font-geist-mono), ui-monospace, monospace;
+  outline: none;
+  resize: vertical;
+}
+.code-block {
+  border: 1px solid rgba(14, 14, 40, 0.7);
+  border-radius: 6px;
+  padding: 14px;
+  background: rgba(14, 14, 20, 0.94);
+  color: #f5f7ff;
+  font: 11.5px/1.6 var(--font-geist-mono), ui-monospace, monospace;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.error-box, .success-box {
+  border: 1px solid rgba(240, 52, 139, 0.55);
+  border-radius: 6px;
+  padding: 14px;
+  background: rgba(255, 255, 255, 0.7);
+  color: #a40f50;
+  font-size: 13px;
+  line-height: 1.55;
+}
+.success-box { border-color: rgba(7, 122, 75, 0.5); color: var(--green); }
 
 /* ── gel: glossy 3D pill (the haoqi glass-object nod) ── */
 .gel {
@@ -255,7 +333,12 @@ body {
 .type-in { animation: typing 1.4s steps(60, end) both; }
 
 @media (prefers-reduced-motion: reduce) {
-  .gel, .sparkle, .marquee-track { animation: none; }
+  .gel, .sparkle, .marquee-track, .live-dot, .row-in, .toast-in, .invoking, .type-in { animation: none; }
+}
+
+@media (max-width: 640px) {
+  .code-input { min-height: 420px; }
+  .display-hero { overflow-wrap: anywhere; }
 }
 
 ::-webkit-scrollbar { width: 8px; height: 8px; }
