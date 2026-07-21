@@ -2,7 +2,9 @@
 
 Review date: 2026-07-22
 Baseline: `bf5e212`
-Review target: working tree before commit
+Review target: `88d646d`
+Production Worker version: `d765b521-2dce-4d56-877f-166ae36ac6f8`
+GitHub Pages release: `3ff0086`
 
 ## Executive summary
 
@@ -14,12 +16,12 @@ Review target: working tree before commit
 | Low | 0 | 0 |
 
 **Overall implementation risk:** Medium because this change modifies D1 schema, public catalog contracts, and the pre-x402 invocation path.
-**Recommendation:** Conditional before deployment; approve after the remote migration, production smoke test, and online UI checks pass.
+**Recommendation:** Approve. The remote migration, production smoke test, public catalog checks, and desktop/mobile online QA passed.
 
 Key metrics:
 
-- 13 changed implementation/data/documentation files before this report.
-- 602 additions and 34 deletions, including a 329-line data migration.
+- 14 changed implementation/data/documentation files in `bf5e212..88d646d`.
+- 738 additions and 97 deletions, including the curated-data migration and review reports.
 - 2 high-risk files reviewed deeply: `worker/src/index.ts` and `worker/migrations/0003_curated_catalog.sql`.
 - 3 direct `publicSkill()` consumers checked.
 - 12/12 pinned upstream URLs returned HTTP 200.
@@ -101,14 +103,17 @@ The result belonged to the same agent, so this was not a cross-tenant disclosure
 | 3 paid + 12 curated rows | Local D1 query through `/api/v1/skills` | Pass |
 | Curated provenance complete | API assertion: GitHub URL + 40-char commit + source path | Pass |
 | Curated invoke cannot reach payment | Authenticated local request returns `409 source_only_skill` | Pass |
-| Existing paid path remains distinct | Detail page retains x402 contract only for paid API | Pass; production smoke still required |
+| Existing paid path remains distinct | Production smoke returned an x402 v2 challenge on Base mainnet to the configured payee | Pass |
 | Public types compile | `bun run typecheck` | Pass |
 | Static site builds | `bun run build` including Wrangler dry run | Pass |
 | Public copy scan | `bun run copy:check` | Pass |
-| Desktop UI | 1440 px Playwright snapshot and screenshot | Pass |
-| Mobile UI | 390 px, no horizontal overflow | Pass |
-| Empty search | 390 px Playwright flow | Pass |
-| Curated high-risk detail | No API-key input; one pinned source link | Pass |
+| Remote migration | D1 reports 15 approved rows: 3 paid APIs + 12 curated source listings | Pass |
+| Production API | `https://gokui.mesalaunch.com/` and `/api/health` returned 200 twice; production smoke passed 8 checks | Pass |
+| Desktop public UI | GitHub Pages at 1440 px: 15 cards, one curated section, no horizontal overflow | Pass |
+| Mobile public UI | GitHub Pages at 390 px: 15 cards and `clientWidth = scrollWidth = 390` | Pass |
+| Empty search and recovery | Public 390 px Playwright flow shows the empty state and restores all 15 cards after clearing | Pass |
+| Curated high-risk detail | Public NVIDIA detail has no API-key input, one pinned source link, and the high-risk label | Pass |
+| Browser runtime | Public page fetched `https://gokui.mesalaunch.com/api/v1/skills` with HTTP 200; zero console errors/warnings | Pass |
 
 The repository-wide i18n parity check still fails because 58 non-English/non-Chinese dictionaries were already missing legal and accessibility keys at baseline `bf5e212`. All 60 JSON dictionaries parse, this diff adds no translation key, and the user explicitly deferred the 60-language copy pass. This is a pre-existing release-quality limitation, not a regression from the curated catalog.
 
@@ -130,10 +135,10 @@ The repository-wide i18n parity check still fails because 58 non-English/non-Chi
 
 ### Blocking before production
 
-- [ ] Apply `0003_curated_catalog.sql` to remote D1 before deploying code that reads the new fields.
-- [ ] Run the updated production smoke test and confirm the existing x402 endpoint still returns a valid v2 challenge.
-- [ ] Verify the public catalog reports 15 total, 3 paid, 12 curated, and zero missing source URLs.
-- [ ] Check `/store` and one curated `/skill` page at desktop and 390 px on the public URL.
+- [x] Apply `0003_curated_catalog.sql` to remote D1 before deploying code that reads the new fields.
+- [x] Run the updated production smoke test and confirm the existing x402 endpoint still returns a valid v2 challenge.
+- [x] Verify the public catalog reports 15 total, 3 paid, 12 curated, and zero missing source URLs.
+- [x] Check `/store` and one curated `/skill` page at desktop and 390 px on the public URL.
 
 ### Follow-up
 
@@ -159,6 +164,6 @@ Limits:
 - This was not a formal malware analysis of every upstream reference file.
 - A risk label applies only to the pinned reviewed commit.
 - GitHub publisher identity and license files were inspected, but GOKUI has no partnership or identity-verification relationship with these publishers.
-- Production migration and online verification were pending when this report was first written.
+- Production verification covers the published GOKUI build as of Worker version `d765b521-2dce-4d56-877f-166ae36ac6f8` and Pages commit `3ff0086`; it is not a standing guarantee for future upstream changes.
 
 **Confidence:** high for GOKUI payment/provenance isolation; medium for the behavior of third-party packages after users install them outside GOKUI.
