@@ -30,7 +30,7 @@ const forbidden = [
   /beta reviewer|manual beta review|fixed beta price|beta upload/i,
   /冒充未经审计|首个生产流程|下一阶段的打包/,
   /job-20\d{6}-\d+/,
-  /ZXQ|ЗКС|98573928475610293847|:::4000\d:::/,
+  /ZXQ|ЗКС|98573928475610293847|:::4\d{4}:::/,
 ];
 const allowedExtensions = new Set([".json", ".md", ".ts", ".tsx"]);
 
