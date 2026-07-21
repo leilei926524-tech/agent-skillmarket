@@ -15,7 +15,8 @@ const STEPS = [
 
 export default function Landing() {
   const [stats, setStats] = useState<Stats | null>(null);
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
+  const isChinese = locale === "zh-CN";
   useEffect(() => { api<Stats>("/api/v1/public/stats").then(setStats).catch(() => setStats(null)); }, []);
   return (
     <main>
@@ -30,14 +31,20 @@ export default function Landing() {
           </div>
         </div>
         <div className="relative">
-          <h1 className="display-hero max-w-[1100px] break-words text-[11vw] sm:text-[9vw] md:text-[5.8rem] lg:text-[6.9rem]">
+          <h1 className={`display-hero break-words ${isChinese
+            ? "max-w-[5.5em] text-[16vw] sm:text-[14vw] md:text-[8rem] lg:text-[9.5rem]"
+            : "max-w-[1100px] text-[11vw] sm:text-[9vw] md:text-[5.8rem] lg:text-[6.9rem]"
+          }`}>
             {t("home.hero")}
           </h1>
           <div className="absolute right-[5%] top-[30%] hidden xl:block select-none">
             <div className="gel px-9 py-7 text-xl font-extrabold">HTTP 402<span className="sparkle" style={{ left: "-12px", top: "-10px" }} /></div>
           </div>
         </div>
-        <p className="mt-8 max-w-2xl text-lg leading-relaxed">
+        <p className={`mt-8 ${isChinese
+          ? "max-w-4xl text-xl font-medium leading-snug md:text-2xl"
+          : "max-w-2xl text-lg leading-relaxed"
+        }`}>
           {t("home.body")}
         </p>
         <div className="mt-8 flex flex-wrap gap-3">
