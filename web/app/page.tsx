@@ -30,10 +30,10 @@ export default function Landing() {
           </div>
         </div>
         <div className="relative">
-          <h1 className="display-hero text-[13vw] md:text-[7.2rem] lg:text-[8.3rem]">
-            {t("home.hero1")}<br />{t("home.hero2")}<br />{t("home.hero3")}
+          <h1 className="display-hero max-w-[1100px] break-words text-[11vw] sm:text-[9vw] md:text-[5.8rem] lg:text-[6.9rem]">
+            {t("home.hero")}
           </h1>
-          <div className="absolute right-[5%] top-[30%] hidden md:block select-none">
+          <div className="absolute right-[5%] top-[30%] hidden xl:block select-none">
             <div className="gel px-9 py-7 text-xl font-extrabold">HTTP 402<span className="sparkle" style={{ left: "-12px", top: "-10px" }} /></div>
           </div>
         </div>
