@@ -1,4 +1,4 @@
-import { wrapFetchWithPaymentFromConfig, type PaymentPolicy } from "@x402/fetch";
+import { decodePaymentResponseHeader, wrapFetchWithPaymentFromConfig, type PaymentPolicy } from "@x402/fetch";
 import { ExactEvmScheme } from "@x402/evm";
 import { privateKeyToAccount } from "viem/accounts";
 
@@ -7,7 +7,7 @@ const skillSlug = process.env.SKILL_SLUG || "deal-desk-discount-guardrails";
 const agentKey = process.env.AGENT_API_KEY || "";
 const privateKey = process.env.EVM_PRIVATE_KEY as `0x${string}` | undefined;
 const expectedPayTo = (process.env.EXPECTED_PAY_TO || "").toLowerCase();
-const network = process.env.X402_NETWORK || "eip155:84532";
+const network = (process.env.X402_NETWORK || "eip155:84532") as `eip155:${string}`;
 const maxAtomicUsdc = BigInt(process.env.MAX_ATOMIC_USDC || "10000");
 const usdcByNetwork: Record<string, string> = {
   "eip155:84532": "0x036cbd53842c5426634e7929541ec2318f3dcf7e",
@@ -40,6 +40,15 @@ const paidFetch = wrapFetchWithPaymentFromConfig(fetch, {
   policies: [strictPaymentPolicy],
 });
 
+const skillInput = process.env.SKILL_INPUT_JSON
+  ? JSON.parse(process.env.SKILL_INPUT_JSON)
+  : {
+      discountPercent: 25,
+      annualContractValueUsd: 100_000,
+      termMonths: 24,
+      prepaid: true,
+    };
+
 const response = await paidFetch(endpoint, {
   method: "POST",
   headers: {
@@ -47,17 +56,17 @@ const response = await paidFetch(endpoint, {
     "Content-Type": "application/json",
     "Idempotency-Key": crypto.randomUUID(),
   },
-  body: JSON.stringify({
-    input: process.env.SKILL_INPUT || "A customer asks for a 35% annual-plan discount with no term commitment.",
-  }),
+  body: JSON.stringify(skillInput),
 });
 
 const body = await response.json();
 if (!response.ok) throw new Error(`Invocation failed (${response.status}): ${JSON.stringify(body)}`);
 
+const paymentResponseHeader = response.headers.get("PAYMENT-RESPONSE");
+
 console.log(JSON.stringify({
   status: response.status,
   payer: account.address,
-  paymentResponse: response.headers.get("PAYMENT-RESPONSE"),
+  paymentResponse: paymentResponseHeader ? decodePaymentResponseHeader(paymentResponseHeader) : null,
   result: body,
 }, null, 2));

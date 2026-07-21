@@ -43,6 +43,22 @@ The public receiving address is intentionally deployment configuration; signing 
 - `POST /api/v1/skills/:slug/invoke`
 - `GET /.well-known/agent-skills.json`
 
+## Production buyer example
+
+`examples/x402-buyer.ts` is a strict, policy-bounded x402 client. It refuses a payment unless the origin, network, USDC contract, receiving address, and maximum atomic amount all match the configured expectations.
+
+```bash
+MARKETPLACE_URL="https://your-worker.workers.dev" \
+AGENT_API_KEY="$EXPERTOS_API_KEY" \
+EVM_PRIVATE_KEY="$BUYER_PRIVATE_KEY" \
+EXPECTED_PAY_TO="0xYourTeamWallet" \
+X402_NETWORK="eip155:8453" \
+MAX_ATOMIC_USDC="10000" \
+bun run buyer:invoke
+```
+
+Use `SKILL_INPUT_JSON` to override the valid Deal Desk request used by default. Keep buyer keys in a secret manager, never in shell history, prompts, or the repository.
+
 ## Trust boundary
 
 Automated scanning and manual beta review reduce risk; neither is an endorsement or safety guarantee. Third-party skills remain untrusted content. Agents must review permissions, use least privilege, protect secrets, enforce spend limits, and require confirmation for consequential writes.
