@@ -272,7 +272,7 @@ app.post("/api/v1/agent/recommend", requireAgent, async (c) => {
         : "Fallback candidate ranked by approved status, risk result, and current catalog coverage.",
       skill: publicSkill(skill, origin),
     })),
-    rankingDisclosure: "Beta ranking uses keyword overlap, approved status, risk result, price filter, and real settled invoke count. It does not use simulated ratings.",
+    rankingDisclosure: "Ranking uses task-term overlap, approved status, risk result, price filter, and settled invocation count.",
   });
 });
 
@@ -399,7 +399,7 @@ app.post("/api/v1/admin/submissions/:id/approve", async (c) => {
         submission.skill_markdown,
         c.env.X402_PRICE_USD,
         submission.risk_level,
-        "Automated pre-scan passed and manual beta review approved. This is not an endorsement; review permissions before use.",
+        "Automated pre-scan passed and a marketplace reviewer approved the listing. Approval is not an endorsement; review permissions before use.",
         timestamp,
         timestamp,
       ),

@@ -69,7 +69,7 @@ export function scanSkill(markdown: string): ScanResult {
   if (!/^\d+\.\d+(?:\.\d+)?(?:-[0-9A-Za-z.-]+)?$/.test(version)) {
     fieldErrors.push("version must look like 1.0.0");
   }
-  if (license !== "MIT") fieldErrors.push("license must be MIT for the beta marketplace");
+  if (license !== "MIT") fieldErrors.push("license must be MIT for this marketplace");
   if (fieldErrors.length) {
     return {
       safe: false,

@@ -20,7 +20,7 @@ for (const locale of LOCALES) {
   const missing = expectedKeys.filter((key) => !(key in dictionary));
   const extra = keys.filter((key) => !(key in english));
   const empty = keys.filter((key) => !dictionary[key]?.trim());
-  const leakedTokens = keys.filter((key) => /ZXQ|98573928475610293847/.test(dictionary[key]));
+  const leakedTokens = keys.filter((key) => /ZXQ|ЗКС|98573928475610293847|:::4000\d:::/.test(dictionary[key]));
   if (missing.length) problems.push(`${locale.code}: missing ${missing.join(", ")}`);
   if (extra.length) problems.push(`${locale.code}: extra ${extra.join(", ")}`);
   if (empty.length) problems.push(`${locale.code}: empty ${empty.join(", ")}`);

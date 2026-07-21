@@ -2,7 +2,7 @@
 
 The browser uses same-origin `/api/v1/*` endpoints in production. For a separate local API, set `NEXT_PUBLIC_API_BASE_URL` before `next build`.
 
-Live mode has no `localStorage` demo driver, random transactions, seeded balances, fake ratings, or silent mock fallback.
+Production pages use the Worker API and D1 as their source of marketplace data. Development fixtures are not used in production.
 
 Primary contracts:
 

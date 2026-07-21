@@ -9,6 +9,7 @@
     "build": "bun run build:web && wrangler deploy --dry-run --outdir dist-worker",
     "typecheck": "tsc -p worker/tsconfig.json --noEmit",
     "i18n:check": "bun run scripts/check-i18n.ts",
+    "copy:check": "bun run scripts/check-public-copy.ts",
     "smoke": "bun run scripts/smoke.ts",
     "buyer:invoke": "bun run examples/x402-buyer.ts",
     "db:local": "wrangler d1 migrations apply DB --local",

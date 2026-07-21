@@ -96,7 +96,7 @@ curl -H "Authorization: Bearer $EXPERTOS_API_KEY" \\
 
 # ${t("agents.quickstart.invoke")}
 curl -i -X POST -H "Authorization: Bearer $EXPERTOS_API_KEY" \\
-  -H "Idempotency-Key: job-20260721-001" \\
+  -H "Idempotency-Key: job-unique-001" \\
   -H "Content-Type: application/json" \\
   -d '{"discountPercent":25,"annualContractValueUsd":100000,"termMonths":24,"prepaid":true}' \\
   https://YOUR_HOST/api/v1/skills/deal-desk-discount-guardrails/invoke`}</pre>
