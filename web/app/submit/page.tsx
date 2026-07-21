@@ -130,7 +130,25 @@ export default function SubmitSkill() {
   }
 
   async function copyPrompt() {
-    await navigator.clipboard.writeText(prompt);
+    let didCopy = false;
+
+    try {
+      if (!navigator.clipboard?.writeText) throw new Error("Clipboard API unavailable");
+      await navigator.clipboard.writeText(prompt);
+      didCopy = true;
+    } catch {
+      const textarea = document.createElement("textarea");
+      textarea.value = prompt;
+      textarea.setAttribute("readonly", "");
+      textarea.style.position = "fixed";
+      textarea.style.opacity = "0";
+      document.body.appendChild(textarea);
+      textarea.select();
+      didCopy = document.execCommand("copy");
+      textarea.remove();
+    }
+
+    if (!didCopy) return;
     setCopied(true);
     window.setTimeout(() => setCopied(false), 2500);
   }
