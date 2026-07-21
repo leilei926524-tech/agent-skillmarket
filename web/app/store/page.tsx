@@ -6,7 +6,7 @@ import { api, PublicSkill, usd } from "@/lib/live";
 import { useI18n } from "@/lib/i18n";
 
 export default function Store() {
-  const { t } = useI18n();
+  const { locale, t } = useI18n();
   const [skills, setSkills] = useState<PublicSkill[]>([]);
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(true);
@@ -19,16 +19,28 @@ export default function Store() {
   }, []);
   const shown = useMemo(() => {
     const q = query.toLowerCase().trim();
-    return q ? skills.filter((skill) => `${skill.title} ${skill.description} ${skill.category} ${skill.tags.join(" ")}`.toLowerCase().includes(q)) : skills;
-  }, [query, skills]);
+    if (!q) return skills;
+    const aliases = locale === "zh-CN"
+      ? [
+          [/定价|价格|折扣/, "pricing discount"],
+          [/风控|安全|注入/, "security prompt-injection triage"],
+          [/发票|开票|跨境账单/, "invoice cross-border finance"],
+        ].filter(([pattern]) => (pattern as RegExp).test(q)).flatMap(([, terms]) => String(terms).split(" "))
+      : [];
+    const needles = [q, ...aliases];
+    return skills.filter((skill) => {
+      const haystack = `${skill.title} ${skill.description} ${skill.category} ${skill.tags.join(" ")}`.toLowerCase();
+      return needles.some((needle) => haystack.includes(needle));
+    });
+  }, [locale, query, skills]);
   return (
     <main className="mx-auto max-w-[1360px] px-6 pb-10 w-full">
       <section className="pt-10 pb-8 flex flex-wrap items-end justify-between gap-6">
         <div><div className="kicker mb-3">{t("store.kicker")}</div><h1 className="display-hero text-4xl md:text-6xl">{t("store.hero1")}<br />{t("store.hero2")}</h1></div>
         <div className="max-w-md w-full"><label className="kicker !text-[9px]" htmlFor="skill-search">{t("store.searchLabel")}</label><input id="skill-search" className="field mt-2" value={query} onChange={(event) => setQuery(event.target.value)} placeholder={t("store.searchPlaceholder")} /></div>
       </section>
-      {loading && <div className="panel p-8 mono text-sm">{t("store.loading")}</div>}
-      {error && <div className="error-box">{t("store.error")} {error}</div>}
+      {loading && <div className="panel p-8 mono text-sm" role="status">{t("store.loading")}</div>}
+      {error && <div className="error-box" role="alert">{t("common.requestFailed")}</div>}
       {!loading && !error && shown.length === 0 && <div className="panel p-8"><p>{t("store.empty")}</p><Link href="/submit" className="btn-ink mt-5">{t("store.submitMissing")}</Link></div>}
       <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
         {shown.map((skill) => (

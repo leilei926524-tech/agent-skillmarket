@@ -180,7 +180,7 @@ export default function SubmitSkill() {
       </section>
 
       {receipt ? (
-        <div className="panel p-6 md:p-8 !border-green/50">
+        <div className="panel p-6 md:p-8 !border-green/50" role="status">
           <div className="kicker !text-[9px] text-green mb-3">{t("submit.stored")}</div>
           <h2 className="text-3xl font-bold">{t("submit.scanPassed")}</h2>
           <p className="mt-3">{t("common.status")}: <span className="chip bg-amber/10 text-amber border border-amber/30">{receipt.submission.status}</span></p>
@@ -202,7 +202,7 @@ export default function SubmitSkill() {
               </div>
               <div className="flex flex-wrap gap-3 mt-6">
                 <button type="button" className="btn-ink" onClick={copyPrompt}>{copied ? t("submit.ai.copied") : t("submit.ai.copy")}</button>
-                <a className="btn-outline" href="https://chatgpt.com/" target="_blank" rel="noreferrer">{t("submit.ai.open")}</a>
+                <a className="btn-outline" href="https://chatgpt.com/" target="_blank" rel="noreferrer" aria-label={`${t("submit.ai.open")} (opens in a new tab)`}>{t("submit.ai.open")}</a>
               </div>
               <p className="text-xs text-dim mt-4">{t("submit.ai.supported")}</p>
               <details className="mt-5 border-t border-line/70 pt-4">
@@ -223,10 +223,10 @@ export default function SubmitSkill() {
               <label className="label mt-6">{t("submit.upload")}<input className="field" type="file" accept=".md,.markdown,text/markdown" onChange={(event) => onFile(event.target.files?.[0])} /></label>
               <details className="mt-5 border-t border-line/70 pt-4">
                 <summary className="cursor-pointer text-sm font-semibold">{t("submit.paste")}</summary>
-                <textarea className="code-input mt-4 min-h-56" spellCheck={false} value={form.skillMarkdown} onChange={(event) => setSkillMarkdown(event.target.value)} />
+                <textarea id="skill-markdown-paste" aria-label={t("submit.paste")} className="code-input mt-4 min-h-56" spellCheck={false} value={form.skillMarkdown} onChange={(event) => setSkillMarkdown(event.target.value)} />
               </details>
-              {hasSkill && <div className="success-box mt-5"><b>{t("submit.ready")}</b><br /><span className="mono text-xs">{parsed.name} · v{parsed.version} · {parsed.lines.toLocaleString(locale)} {t("common.lines")}</span></div>}
-              {error && !hasSkill && <div className="error-box mt-5">{error}</div>}
+              {hasSkill && <div className="success-box mt-5" role="status"><b>{t("submit.ready")}</b><br /><span className="mono text-xs">{parsed.name} · v{parsed.version} · {parsed.lines.toLocaleString(locale)} {t("common.lines")}</span></div>}
+              {error && !hasSkill && <div className="error-box mt-5" role="alert">{error}</div>}
             </section>
           </div>
 
@@ -243,9 +243,9 @@ export default function SubmitSkill() {
 
               <div className="grid md:grid-cols-2 gap-4 mt-7">
                 <label className="label">{t("submit.skillName")}<input className="field" value={form.title} onChange={(event) => set("title", event.target.value)} required maxLength={100} placeholder={t("submit.skillNamePlaceholder")} /></label>
-                <label className="label">{t("submit.publisherName")}<input className="field" value={form.publisherName} onChange={(event) => set("publisherName", event.target.value)} required /></label>
+                <label className="label">{t("submit.publisherName")}<input className="field" autoComplete="name" value={form.publisherName} onChange={(event) => set("publisherName", event.target.value)} required /></label>
                 <label className="label md:col-span-2">{t("submit.description")}<textarea className="field min-h-24" value={form.description} onChange={(event) => set("description", event.target.value)} required minLength={40} maxLength={1024} placeholder={t("submit.descriptionPlaceholder")} /></label>
-                <label className="label">{t("submit.contactEmail")}<input className="field" type="email" value={form.publisherEmail} onChange={(event) => set("publisherEmail", event.target.value)} required /></label>
+                <label className="label">{t("submit.contactEmail")}<input className="field" type="email" autoComplete="email" value={form.publisherEmail} onChange={(event) => set("publisherEmail", event.target.value)} required /></label>
               </div>
 
               <details className="mt-5 border-t border-line/70 pt-4">
@@ -260,11 +260,11 @@ export default function SubmitSkill() {
               <details className="mt-5 border-t border-line/70 pt-4">
                 <summary className="cursor-pointer text-sm font-semibold">{t("submit.edit")}</summary>
                 <div className="flex flex-wrap justify-between gap-3 mt-4"><span className="mono text-xs">{parsed.name} · v{parsed.version}</span><span className="meta text-[9px] text-dim">{parsed.bytes.toLocaleString(locale)} {t("common.bytes")} · {parsed.lines.toLocaleString(locale)} {t("common.lines")}</span></div>
-                <textarea className="code-input mt-3" spellCheck={false} value={form.skillMarkdown} onChange={(event) => setSkillMarkdown(event.target.value)} required />
+                <textarea aria-label={t("submit.edit")} className="code-input mt-3" spellCheck={false} value={form.skillMarkdown} onChange={(event) => setSkillMarkdown(event.target.value)} required />
               </details>
 
               <label className="flex items-start gap-3 mt-6 text-sm leading-relaxed"><input type="checkbox" className="mt-1" checked={form.rightsConfirmed} onChange={(event) => set("rightsConfirmed", event.target.checked)} required /><span>{t("submit.rights")}</span></label>
-              {error && <div className="error-box mt-5"><b>{t("submit.blocked")}</b><br />{error}{details ? <pre className="code-block mt-3 max-h-56 overflow-auto">{JSON.stringify(details, null, 2)}</pre> : null}</div>}
+              {error && <div className="error-box mt-5" role="alert"><b>{t("submit.blocked")}</b><br />{error}{details ? <pre className="code-block mt-3 max-h-56 overflow-auto">{JSON.stringify(details, null, 2)}</pre> : null}</div>}
               <button className="btn-ink mt-6" disabled={busy}>{busy ? t("submit.running") : t("submit.send")}</button>
               <p className="text-xs text-dim mt-4">{t("submit.betaNote")}</p>
             </form>

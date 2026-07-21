@@ -24,6 +24,13 @@ export default function Activity() {
     { k: "common.settled", v: stats?.settledInvocations ?? "—" },
   ];
 
+  function explorerUrl(row: Row) {
+    if (!row.tx_hash) return "";
+    return row.network === "eip155:84532"
+      ? `https://sepolia.basescan.org/tx/${row.tx_hash}`
+      : `https://basescan.org/tx/${row.tx_hash}`;
+  }
+
   return (
     <main className="mx-auto max-w-[1180px] px-6 pb-12 w-full">
       <section className="pt-10 pb-8 flex flex-wrap items-end justify-between gap-4">
@@ -36,7 +43,7 @@ export default function Activity() {
           {stats?.settledInvocations ?? "—"} {t("common.settled")}
         </div>
       </section>
-      {error && <div className="error-box">{error}</div>}
+      {error && <div className="error-box" role="alert">{t("common.requestFailed")}</div>}
       <div className="grid grid-cols-3 gap-3 mb-4">
         {counters.map((item) => <div className="panel p-5" key={item.k}><div className="mono text-3xl font-bold">{item.v}</div><div className="kicker !text-[8px] mt-2">{t(item.k)}</div></div>)}
       </div>
@@ -49,7 +56,9 @@ export default function Activity() {
             <span className="mono text-dim">{new Date(row.created_at).toLocaleString(locale)}</span>
             <div><b>{row.skill_title}</b><div className="mono text-dim mt-1">{row.agent_prefix}…</div></div>
             <span className="mono font-bold text-green">{usd(row.amount_usd)}</span>
-            <span className="mono text-dim break-all">{row.tx_hash || t("console.receiptPending")}</span>
+            {row.tx_hash ? (
+              <a className="mono text-violet underline underline-offset-4 break-all" href={explorerUrl(row)} target="_blank" rel="noreferrer" aria-label={`${row.tx_hash} (opens in BaseScan)`}>{row.tx_hash}</a>
+            ) : <span className="mono text-dim break-all">{t("console.receiptPending")}</span>}
           </div>
         ))}
       </div>

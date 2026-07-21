@@ -44,15 +44,15 @@ export default function Agents() {
           <div className="kicker !text-[9px] mb-5">{t("agents.issue")}</div>
           {access ? (
             <div>
-              <div className="success-box"><b>{access.agent.name} {t("agents.active")}</b><br />{t("agents.keyOnce")}</div>
+              <div className="success-box" role="status"><b>{access.agent.name} {t("agents.active")}</b><br />{t("agents.keyOnce")}</div>
               <pre className="code-block mt-4 break-all whitespace-pre-wrap">{access.apiKey}</pre>
               <button className="btn-outline mt-4" type="button" onClick={() => navigator.clipboard.writeText(access.apiKey)}>{t("common.copyKey")}</button>
               <p className="text-xs text-dim mt-4">{access.warning}</p>
             </div>
           ) : (
             <form onSubmit={register} className="space-y-4">
-              <label className="label">{t("agents.name")}<input className="field" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder={t("agents.namePlaceholder")} required /></label>
-              <label className="label">{t("agents.ownerEmail")}<input className="field" type="email" value={form.ownerEmail} onChange={(e) => setForm({ ...form, ownerEmail: e.target.value })} required /></label>
+              <label className="label">{t("agents.name")}<input className="field" autoComplete="off" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder={t("agents.namePlaceholder")} required /></label>
+              <label className="label">{t("agents.ownerEmail")}<input className="field" type="email" autoComplete="email" value={form.ownerEmail} onChange={(e) => setForm({ ...form, ownerEmail: e.target.value })} required /></label>
               <label className="label">{t("agents.purpose")}<textarea className="field min-h-28" value={form.purpose} onChange={(e) => setForm({ ...form, purpose: e.target.value })} placeholder={t("agents.purposePlaceholder")} required minLength={20} /></label>
               <label className="label">{t("agents.budget")}<input className="field" type="number" min="0.01" max="100" step="0.01" value={form.dailyBudgetUsd} onChange={(e) => setForm({ ...form, dailyBudgetUsd: e.target.value })} /></label>
               <button className="btn-ink">{t("agents.create")}</button>
@@ -62,15 +62,15 @@ export default function Agents() {
 
         <div className="panel p-6">
           <div className="kicker !text-[9px] mb-5">{t("agents.recommendation")}</div>
-          <label className="label">{t("agents.apiKey")}<input type="password" className="field" value={key} onChange={(e) => setKey(e.target.value)} placeholder="gokui_live_…" /></label>
+          <label className="label">{t("agents.apiKey")}<input type="password" autoComplete="off" spellCheck={false} className="field" value={key} onChange={(e) => setKey(e.target.value)} placeholder="gokui_live_…" /></label>
           <label className="label mt-4">{t("agents.task")}<textarea className="field min-h-32" value={task} onChange={(e) => { setTaskTouched(true); setTask(e.target.value); }} /></label>
           <button type="button" className="btn-ink mt-4" onClick={recommend} disabled={!key || task.length < 10}>{t("agents.find")}</button>
-          {error && <div className="error-box mt-4">{error}</div>}
+          {error && <div className="error-box mt-4" role="alert">{t("common.requestFailed")}</div>}
         </div>
       </div>
 
       {recommendation && (
-        <section className="mt-4">
+        <section className="mt-4" aria-live="polite">
           <div className="grid md:grid-cols-3 gap-4">
             {recommendation.recommendations.map((item) => (
               <div className="panel p-5" key={item.skill.id}>

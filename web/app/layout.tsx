@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import { Nav, ChartPaper, Footer } from "@/components/nav";
+import { Nav, ChartPaper, Footer, SkipLink } from "@/components/nav";
 import { I18nProvider } from "@/lib/i18n";
 
 const geistSans = Geist({
@@ -15,12 +15,14 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://gokui.mesalaunch.com"),
-  title: "GOKUI — Make your AI work smarter",
+  metadataBase: new URL("https://1924902988hu-del.github.io"),
+  title: "GOKUI — Expert Skills for AI Agents",
   description:
     "Reuse the latest skills from domain experts to make your AI work smarter.",
+  alternates: { canonical: "/" },
+  robots: { index: true, follow: true },
   openGraph: {
-    title: "GOKUI — Make your AI work smarter",
+    title: "GOKUI — Expert Skills for AI Agents",
     description: "Reuse the latest skills from domain experts to make your AI work smarter.",
     type: "website",
     images: [{
@@ -32,7 +34,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "GOKUI — Make your AI work smarter",
+    title: "GOKUI — Expert Skills for AI Agents",
     description: "Reuse the latest skills from domain experts to make your AI work smarter.",
     images: ["/og.png"],
   },
@@ -50,9 +52,10 @@ export default function RootLayout({
     >
       <body className="min-h-full flex flex-col">
         <I18nProvider>
+          <SkipLink />
           <ChartPaper />
           <Nav />
-          <div className="flex-1">{children}</div>
+          <div id="main-content" tabIndex={-1} className="flex-1">{children}</div>
           <Footer />
         </I18nProvider>
       </body>

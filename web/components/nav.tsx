@@ -17,6 +17,11 @@ export function ChartPaper() {
   );
 }
 
+export function SkipLink() {
+  const { t } = useI18n();
+  return <a href="#main-content" className="skip-link">{t("common.skipToContent")}</a>;
+}
+
 const NAV = [
   { href: "/", label: "nav.index", mobileHidden: true },
   { href: "/store", label: "nav.store" },
@@ -38,7 +43,12 @@ export function Nav() {
           {NAV.map((item) => {
             const active = item.href === "/" ? path === "/" : path.startsWith(item.href);
             return (
-              <Link key={item.href} href={item.href} className={`${item.mobileHidden ? "hidden sm:inline" : ""} ${active ? "text-violet font-bold" : "text-foreground/80 hover:text-violet"}`}>
+              <Link
+                key={item.href}
+                href={item.href}
+                aria-current={active ? "page" : undefined}
+                className={`${item.mobileHidden ? "hidden sm:inline" : ""} nav-link ${active ? "text-violet font-bold" : "text-foreground/80 hover:text-violet"}`}
+              >
                 {item.mobileLabel ? <><span className="sm:hidden">{t(item.mobileLabel)}</span><span className="hidden sm:inline">{t(item.label)}</span></> : t(item.label)}
               </Link>
             );
@@ -59,7 +69,11 @@ export function Footer() {
     <footer className="border-t border-line mt-14">
       <div className="mx-auto max-w-[1360px] px-6 py-5 flex flex-wrap items-center justify-between gap-3 meta text-[10.5px] text-dim">
         <span>GOKUI © 2026 · {t("footer.marketplace")}</span>
-        <Link href="/wallet" className="underline decoration-transparent underline-offset-4 hover:text-violet hover:decoration-violet">{t("footer.stack")}</Link>
+        <nav aria-label={t("footer.legalNavigation")} className="flex flex-wrap items-center gap-4">
+          <Link href="/wallet" className="underline decoration-transparent underline-offset-4 hover:text-violet hover:decoration-violet">{t("footer.stack")}</Link>
+          <Link href="/privacy" className="underline decoration-transparent underline-offset-4 hover:text-violet hover:decoration-violet">{t("footer.privacy")}</Link>
+          <Link href="/terms" className="underline decoration-transparent underline-offset-4 hover:text-violet hover:decoration-violet">{t("footer.terms")}</Link>
+        </nav>
         <span>{t("footer.disclaimer")}</span>
       </div>
     </footer>
