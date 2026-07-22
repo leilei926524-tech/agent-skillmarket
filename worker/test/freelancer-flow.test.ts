@@ -75,7 +75,14 @@ globalThis.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
     }
     return new Response(JSON.stringify({ id: `re_mock_${sentEmails.length}` }), { status: 200 });
   }
-  if (url.includes("base.org")) throw new Error(`Blocked outbound call in tests: ${url}`);
+  try {
+    const host = new URL(url).hostname.toLowerCase();
+    if (host === "base.org" || host.endsWith(".base.org")) {
+      throw new Error(`Blocked outbound call in tests: ${url}`);
+    }
+  } catch {
+    // ignore malformed/relative URLs and fall through to the real fetch
+  }
   return realFetch(input as never, init);
 };
 afterAll(() => {
