@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import { DemoProvider } from "@/lib/demo";
-import { Nav, Toasts, KeyHints, ChartPaper, Footer } from "@/components/nav";
+import { Nav, ChartPaper, Footer, SkipLink } from "@/components/nav";
+import { I18nProvider } from "@/lib/i18n";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -15,9 +15,29 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "ExpertOS — Human Intelligence Layer for AI Agents",
+  metadataBase: new URL("https://1924902988hu-del.github.io"),
+  title: "GOKUI — Expert Skills for AI Agents",
   description:
-    "AI agents invoke encrypted expert skills instantly, or hire verified humans when no skill exists.",
+    "Reuse the latest skills from domain experts to make your AI work smarter.",
+  alternates: { canonical: "/" },
+  robots: { index: true, follow: true },
+  openGraph: {
+    title: "GOKUI — Expert Skills for AI Agents",
+    description: "Reuse the latest skills from domain experts to make your AI work smarter.",
+    type: "website",
+    images: [{
+      url: "/og.png",
+      width: 1734,
+      height: 907,
+      alt: "GOKUI — Reuse the latest skills from domain experts to make your AI work smarter.",
+    }],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "GOKUI — Expert Skills for AI Agents",
+    description: "Reuse the latest skills from domain experts to make your AI work smarter.",
+    images: ["/og.png"],
+  },
 };
 
 export default function RootLayout({
@@ -31,14 +51,13 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
-        <ChartPaper />
-        <DemoProvider>
+        <I18nProvider>
+          <SkipLink />
+          <ChartPaper />
           <Nav />
-          <Toasts />
-          <div className="flex-1">{children}</div>
+          <div id="main-content" tabIndex={-1} className="flex-1">{children}</div>
           <Footer />
-          <KeyHints />
-        </DemoProvider>
+        </I18nProvider>
       </body>
     </html>
   );

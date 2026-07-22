@@ -1,152 +1,87 @@
 "use client";
 
 import Link from "next/link";
-import { useDemo, yen, networkPaidJpy } from "@/lib/demo";
-import { Ticker } from "@/components/nav";
+import { useEffect, useState } from "react";
+import { API_BASE, api } from "@/lib/live";
+import { useI18n, type TranslationKey } from "@/lib/i18n";
+
+type Stats = { skills: number; submissions: number; settledInvocations: number; network: string; mode: string };
 
 const STEPS = [
-  {
-    n: "01",
-    key: "1",
-    title: "INVOKE",
-    body: "An agent hits a judgment call it can't make. It invokes an encrypted expert skill over MCP — pays per call, gets the guardrail answer. The raw logic stays encrypted; extraction is detectable and unprofitable by design.",
-    foot: "¥120/call · settled on Base Sepolia",
-  },
-  {
-    n: "02",
-    key: "2",
-    title: "HIRE",
-    body: "No skill exists? The agent doesn't stop. ExpertOS matches a verified human expert and emails a consent-based task offer — scope, deadline, price.",
-    foot: "opt-in experts · ¥15,000 median task",
-  },
-  {
-    n: "03",
-    key: "3",
-    title: "MINT",
-    body: "The delivered task is compiled into a skill draft. The expert reviews, approves, encrypts — and earns 85% on every future call, while asleep.",
-    foot: "every job becomes tomorrow's skill",
-  },
-];
+  { n: "01", title: "home.step.submit.title", body: "home.step.submit.body" },
+  { n: "02", title: "home.step.discover.title", body: "home.step.discover.body" },
+  { n: "03", title: "home.step.pay.title", body: "home.step.pay.body" },
+] satisfies { n: string; title: TranslationKey; body: TranslationKey }[];
 
 export default function Landing() {
-  const { state } = useDemo();
-  const totalCalls = state.skills.reduce((a, s) => a + s.calls, 0);
-
+  const [stats, setStats] = useState<Stats | null>(null);
+  const { t, locale } = useI18n();
+  const isChinese = locale === "zh-CN";
+  useEffect(() => { api<Stats>("/api/v1/public/stats").then(setStats).catch(() => setStats(null)); }, []);
   return (
     <main>
-      {/* ── hero ── */}
-      <section className="mx-auto max-w-[1360px] px-6 pt-12 md:pt-16 pb-10 relative">
+      <section className="mx-auto max-w-[1360px] px-6 pt-12 md:pt-16 pb-12 relative">
         <div className="flex flex-wrap gap-6 justify-between items-start mb-10">
-          <div className="kicker">
-            The Human Intelligence
-            <br />
-            Layer for AI agents
+          <div className="kicker max-w-xs">{t("home.kicker")}</div>
+          <div className="meta text-[12px] max-w-md leading-relaxed">
+            {t("home.intro")}
           </div>
-          <div className="meta text-[12px] max-w-sm hidden md:block leading-relaxed">
-            Agents invoke encrypted expert skills instantly, or hire verified
-            humans when no skill exists — every completed task becomes
-            tomorrow&apos;s reusable skill.
-          </div>
-          <div className="meta text-[12px] text-dim hidden lg:block text-right">
-            Thinking in agents.
-            <br />
-            Pricing in judgment.
+          <div className="meta text-[11px] text-dim lg:text-right">
+            {t("home.liveOnly")}<br />{t("home.noSimulated")}
           </div>
         </div>
-
         <div className="relative">
-          <h1 className="display-hero text-[13vw] md:text-[7.2rem] lg:text-[8.4rem]">
-            Agents hit walls.
-            <br />
-            Experts are
-            <br />
-            the door.
+          <h1 className={`display-hero break-words ${isChinese
+            ? "max-w-[5.5em] text-[16vw] sm:text-[14vw] md:text-[8rem] lg:text-[9.5rem]"
+            : "max-w-[1100px] text-[11vw] sm:text-[9vw] md:text-[5.8rem] lg:text-[6.9rem]"
+          }`}>
+            {t("home.hero")}
           </h1>
-
-          {/* gel centerpiece */}
-          <div className="absolute right-[4%] top-[26%] hidden md:block select-none">
-            <div className="gel px-10 py-7 text-2xl font-extrabold rotate-[-7deg]">
-              ¥120<span className="text-sm font-semibold ml-1 opacity-90">/call</span>
-              <span className="sparkle" style={{ left: "-12px", top: "-10px" }} />
-              <span
-                className="sparkle"
-                style={{ right: "-8px", bottom: "-12px", width: "18px", height: "18px", animationDelay: "1.2s" }}
-              />
-            </div>
-          </div>
-          <div className="absolute left-[46%] bottom-[-8px] hidden lg:block">
-            <span className="sticker rotate-[2.5deg]">85% to the expert ✓</span>
+          <div className="absolute right-[5%] top-[30%] hidden xl:block select-none">
+            <div className="gel px-9 py-7 text-xl font-extrabold">HTTP 402<span className="sparkle" style={{ left: "-12px", top: "-10px" }} /></div>
           </div>
         </div>
-
-        <div className="mt-10 flex flex-wrap items-center gap-4">
-          <Link href="/store" className="btn-ink">
-            ENTER THE STORE <span aria-hidden>→</span>
-          </Link>
-          <Link
-            href="/console"
-            className="meta text-[12px] underline underline-offset-4 hover:text-violet"
-          >
-            WATCH LIVE CONSOLE
-          </Link>
-          <span className="meta text-[11px] text-dim ml-auto hidden md:inline">
-            PREFERS-REDUCED-MOTION SAFE
-          </span>
-        </div>
-      </section>
-
-      <Ticker />
-
-      {/* ── system: three ruled columns keyed to the demo ── */}
-      <section className="mx-auto max-w-[1360px] px-6 py-14">
-        <div className="kicker mb-8">The system · press 1 — 2 — 3</div>
-        <div className="grid md:grid-cols-3">
-          {STEPS.map((s, i) => (
-            <div
-              key={s.n}
-              className={`py-6 md:py-2 md:px-8 ${i > 0 ? "md:border-l border-line border-t md:border-t-0" : ""} md:first:pl-0`}
-            >
-              <div className="flex items-baseline justify-between">
-                <span className="mono text-5xl font-bold text-violet/90">{s.n}</span>
-                <span className="meta text-[10.5px] text-dim">KEY [{s.key}]</span>
-              </div>
-              <h3 className="display-hero text-2xl mt-4">{s.title}</h3>
-              <p className="text-[14px] leading-relaxed mt-3 text-foreground/85">{s.body}</p>
-              <div className="meta text-[11px] text-dim mt-4">{s.foot}</div>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* ── stats band ── */}
-      <section className="border-t border-b border-line bg-white/35">
-        <div className="mx-auto max-w-[1360px] px-6 py-8 grid grid-cols-2 md:grid-cols-4 gap-6">
-          {[
-            { v: totalCalls.toLocaleString(), k: "CALLS SETTLED" },
-            { v: String(state.skills.length), k: "ENCRYPTED SKILLS LIVE" },
-            { v: "85 / 15", k: "EXPERT / PLATFORM SPLIT" },
-            { v: yen(networkPaidJpy(state.skills)), k: "PAID TO EXPERTS · NETWORK" },
-          ].map((s) => (
-            <div key={s.k}>
-              <div className="mono text-3xl md:text-4xl font-bold">{s.v}</div>
-              <div className="kicker mt-2 !text-[9.5px]">{s.k}</div>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* ── flywheel ── */}
-      <section className="mx-auto max-w-[1360px] px-6 py-14">
-        <div className="kicker mb-6">The flywheel</div>
-        <p className="display-hero text-2xl md:text-4xl leading-tight max-w-4xl">
-          More agent missions <span className="text-violet">→</span> more human
-          work <span className="text-violet">→</span> more reusable skills{" "}
-          <span className="text-violet">→</span> better ExpertOS<span className="text-violet">.</span>
+        <p className={`mt-8 ${isChinese
+          ? "max-w-4xl text-xl font-medium leading-snug md:text-2xl"
+          : "max-w-2xl text-lg leading-relaxed"
+        }`}>
+          {t("home.body")}
         </p>
         <div className="mt-8 flex flex-wrap gap-3">
-          <span className="sticker">Upwork is human-to-human</span>
-          <span className="sticker rotate-[2deg]">We are agent-to-skill</span>
-          <span className="sticker rotate-[-1.5deg]">and agent-to-human ✦</span>
+          <Link href="/store" className="btn-ink">{t("home.browse")}</Link>
+          <Link href="/submit" className="btn-outline">{t("home.submit")}</Link>
+          <Link href="/agents" className="btn-outline">{t("home.connect")}</Link>
+        </div>
+      </section>
+
+      <section className="border-y border-line bg-white/35">
+        <div className="mx-auto max-w-[1360px] px-6 py-7 grid grid-cols-2 md:grid-cols-4 gap-6">
+          {[
+            { v: stats?.skills ?? "—", k: "home.stats.approved" as TranslationKey },
+            { v: stats?.settledInvocations ?? "—", k: "home.stats.invocations" as TranslationKey },
+            { v: stats?.network === "eip155:8453" ? t("common.baseMainnet") : t("common.baseSepolia"), k: "home.stats.network" as TranslationKey },
+            { v: "x402 v2", k: "home.noSimulated" as TranslationKey },
+          ].map((item) => <div key={item.k}><div className="mono text-3xl md:text-4xl font-bold">{item.v}</div><div className="kicker mt-2 !text-[9px]">{t(item.k)}</div></div>)}
+        </div>
+      </section>
+
+      <section className="mx-auto max-w-[1360px] px-6 py-14">
+        <div className="kicker mb-8">{t("home.loop")}</div>
+        <div className="grid md:grid-cols-3">
+          {STEPS.map((step, index) => (
+            <div key={step.n} className={`py-6 md:px-8 ${index ? "border-t md:border-t-0 md:border-l border-line" : "md:pl-0"}`}>
+              <span className="mono text-5xl font-bold text-violet">{step.n}</span>
+              <h2 className="display-hero text-2xl mt-4">{t(step.title)}</h2>
+              <p className="text-sm leading-relaxed mt-3 text-foreground/85">{t(step.body)}</p>
+            </div>
+          ))}
+        </div>
+        <div className="panel mt-10 p-5 md:p-7 flex flex-wrap gap-6 items-center justify-between">
+          <div><div className="kicker !text-[9px] mb-2">{t("home.trust.title")}</div><p className="max-w-3xl text-sm leading-relaxed">{t("home.trust.body")}</p></div>
+          <div className="flex flex-wrap gap-3">
+            <Link href="/store" className="btn-ink">{t("home.browse")}</Link>
+            <a href={`${API_BASE}/.well-known/agent-skills.json`} className="btn-outline mono text-xs">{t("home.manifest")}</a>
+          </div>
         </div>
       </section>
     </main>

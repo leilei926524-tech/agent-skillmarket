@@ -1,0 +1,35 @@
+{
+  "name": "gokui-agent-skillmarket",
+  "version": "0.2.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev --local",
+    "build:web": "bun run --cwd web build",
+    "build": "bun run build:web && wrangler deploy --dry-run --outdir dist-worker",
+    "typecheck": "tsc -p worker/tsconfig.json --noEmit",
+    "i18n:check": "bun run scripts/check-i18n.ts",
+    "copy:check": "bun run scripts/check-public-copy.ts",
+    "smoke": "bun run scripts/smoke.ts",
+    "buyer:invoke": "bun run examples/x402-buyer.ts",
+    "db:local": "wrangler d1 migrations apply DB --local",
+    "db:remote": "wrangler d1 migrations apply DB --remote",
+    "deploy": "bun run build:web && wrangler deploy"
+  },
+  "dependencies": {
+    "@coinbase/x402": "^2.1.0",
+    "@x402/core": "^2.19.0",
+    "@x402/evm": "^2.19.0",
+    "@x402/fetch": "^2.19.0",
+    "@x402/hono": "^2.19.0",
+    "hono": "^4.9.9",
+    "yaml": "^2.8.1"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^5.20260721.1",
+    "@types/node": "^24.0.0",
+    "typescript": "^5.9.3",
+    "viem": "^2.38.6",
+    "wrangler": "^4.94.0"
+  }
+}
