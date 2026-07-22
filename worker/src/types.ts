@@ -14,7 +14,8 @@ export type Env = {
   // Seller payout: platform signs USDC transfers to skill publishers (85/15 split)
   PLATFORM_PRIVATE_KEY?: `0x${string}`;
   SELLER_REVENUE_SHARE_BPS?: string; // basis points, default 8500 (85%)
-  RESEND_API_KEY?: string;           // for Task 5 email feature
+  RESEND_API_KEY?: string;           // Worker secret — never committed
+  RESEND_FROM_EMAIL?: string;        // optional non-secret sender override
 };
 
 export type AgentRecord = {

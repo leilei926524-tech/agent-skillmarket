@@ -2,7 +2,7 @@ import { Hono, type Context, type MiddlewareHandler } from "hono";
 import { cors } from "hono/cors";
 import { logger } from "hono/logger";
 import type { AgentRecord, Env, SkillRecord, Variables } from "./types";
-import { BodyError, jsonError, nowIso, parseJson, publicSkill, randomToken, readJsonBody, sha256 } from "./utils";
+import { BodyError, isSafeHttpUrl, jsonError, nowIso, parseJson, publicSkill, randomToken, readJsonBody, sha256 } from "./utils";
 import { scanSkill } from "./scan";
 import { executeSkill } from "./execution";
 import { paymentSignatureHash, x402Gate } from "./payment";
@@ -13,7 +13,12 @@ const app = new Hono<{ Bindings: Env; Variables: Variables }>();
 type AppEnv = { Bindings: Env; Variables: Variables };
 type AppContext = Context<AppEnv, string>;
 
-app.use("/api/*", logger());
+const requestLogger = logger();
+// Skip logging for the offer review route: its URL carries the task token.
+app.use("/api/*", async (c, next) => {
+  if (/^\/api\/v1\/tasks\/[^/]+\/offer$/.test(c.req.path)) return next();
+  return requestLogger(c, next);
+});
 app.use(
   "/api/*",
   cors({
@@ -447,13 +452,27 @@ app.post("/api/v1/admin/submissions/:id/reject", async (c) => {
 });
 
 // ─────────────────────────────────────────────────────────────
-// Freelancer registry + agent task-matching + email dispatch
+// Freelancer registry + agent task-matching + secure offer flow
+//
+// State machine:
+//   matching → offered → accepted → delivered → payment_pending → paid
+//   Failure states: email_failed, payment_failed, expired, cancelled
+//
+// Security model:
+//   - A cryptographically random task token is generated at match time.
+//     Only its SHA-256 hash is stored. The raw token travels once, inside
+//     the offer email. It is required for accept and deliver.
+//   - GET offer page is read-only (link scanners cannot accept a task).
+//   - Task tokens are never logged (the offer route bypasses the logger).
+//   - "offered" is set only after Resend accepts the message.
+//   - "paid" is set only after a confirmed transaction hash.
 // ─────────────────────────────────────────────────────────────
 
 type FreelancerRecord = {
   id: string; name: string; email: string; bio: string;
   skills_json: string; hourly_rate_usd: string | null;
   availability: string; verified: number;
+  email_consent: number; payout_wallet: string | null;
   created_at: string; updated_at: string;
 };
 
@@ -462,8 +481,46 @@ type TaskRequestRecord = {
   required_skills_json: string; budget_usd: string | null;
   status: string; matched_freelancer_id: string | null;
   offer_expires_at: string | null; submission_url: string | null;
-  submission_note: string | null; created_at: string; updated_at: string;
+  submission_note: string | null;
+  action_token_hash: string | null; idempotency_key: string | null;
+  accepted_at: string | null; delivered_at: string | null; paid_at: string | null;
+  payment_tx_hash: string | null; payment_error: string | null;
+  created_at: string; updated_at: string;
 };
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const WALLET_RE = /^0x[a-fA-F0-9]{40}$/;
+
+async function loadTaskWithFreelancer(c: AppContext, id: string) {
+  return c.env.DB.prepare(
+    `SELECT tr.*, f.email AS freelancer_email, f.name AS freelancer_name, f.payout_wallet AS freelancer_payout_wallet
+       FROM task_requests tr JOIN freelancers f ON f.id = tr.matched_freelancer_id
+      WHERE tr.id = ?`,
+  ).bind(id).first<TaskRequestRecord & { freelancer_email: string; freelancer_name: string; freelancer_payout_wallet: string | null }>();
+}
+
+/** Validates the task action token. Returns null when valid, or an error response. */
+async function checkTaskToken(c: AppContext, task: TaskRequestRecord, provided: string | undefined | null) {
+  const token = (provided || "").trim();
+  if (!token) return jsonError(c, 403, "token_required", "A task token is required.");
+  if (!task.action_token_hash) {
+    return jsonError(c, 410, "offer_reissue_required", "This offer link was invalidated. Ask an admin to resend a secure offer email.");
+  }
+  if (await sha256(token) !== task.action_token_hash) {
+    return jsonError(c, 403, "invalid_token", "The task token is invalid.");
+  }
+  return null;
+}
+
+function offerExpired(task: TaskRequestRecord): boolean {
+  return Boolean(task.offer_expires_at) && new Date(task.offer_expires_at as string) < new Date();
+}
+
+async function markExpired(c: AppContext, task: TaskRequestRecord) {
+  await c.env.DB.prepare(
+    "UPDATE task_requests SET status = 'expired', updated_at = ? WHERE id = ? AND status = 'offered'",
+  ).bind(nowIso(), task.id).run();
+}
 
 // Register as a freelancer / skill builder
 app.post("/api/v1/freelancers/register", async (c) => {
@@ -474,26 +531,53 @@ app.post("/api/v1/freelancers/register", async (c) => {
   const email = String(input.email || "").trim().toLowerCase();
   const bio = String(input.bio || "").trim();
   const skills = Array.isArray(input.skills) ? input.skills.map(String).map((s) => s.trim().toLowerCase()).filter(Boolean).slice(0, 20) : [];
-  const hourlyRate = input.hourlyRateUsd ? String(Number(input.hourlyRateUsd || 0).toFixed(2)) : null;
+  const hourlyRate = input.hourlyRateUsd === null || input.hourlyRateUsd === undefined || String(input.hourlyRateUsd).trim() === ""
+    ? null
+    : String(Number(input.hourlyRateUsd).toFixed(2));
+  const payoutWallet = String(input.payoutWallet || "").trim();
+  // Consent must be an explicit boolean true — anything else stores false.
+  const emailConsent = input.emailConsent === true ? 1 : 0;
   if (!name || name.length > 100) return jsonError(c, 422, "invalid_name", "Name is required and must be under 100 characters.");
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return jsonError(c, 422, "invalid_email", "A valid email is required.");
+  if (!EMAIL_RE.test(email)) return jsonError(c, 422, "invalid_email", "A valid email is required.");
   if (bio.length < 20 || bio.length > 1000) return jsonError(c, 422, "invalid_bio", "Bio must be 20–1000 characters.");
   if (skills.length === 0) return jsonError(c, 422, "skills_required", "Provide at least one skill keyword.");
+  if (hourlyRate !== null && (!Number.isFinite(Number(hourlyRate)) || Number(hourlyRate) < 0 || Number(hourlyRate) > 10_000)) {
+    return jsonError(c, 422, "invalid_hourly_rate", "hourlyRateUsd must be between 0 and 10000.");
+  }
+  if (payoutWallet && !WALLET_RE.test(payoutWallet)) {
+    return jsonError(c, 422, "invalid_payout_wallet", "payoutWallet must be a valid EVM address (0x + 40 hex chars).");
+  }
   const id = crypto.randomUUID();
   const now = nowIso();
   try {
     await c.env.DB.prepare(
-      `INSERT INTO freelancers (id, name, email, bio, skills_json, hourly_rate_usd, availability, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, 'available', ?, ?)`,
-    ).bind(id, name, email, bio, JSON.stringify(skills), hourlyRate, now, now).run();
+      `INSERT INTO freelancers (id, name, email, bio, skills_json, hourly_rate_usd, availability, email_consent, payout_wallet, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, 'available', ?, ?, ?, ?)`,
+    ).bind(id, name, email, bio, JSON.stringify(skills), hourlyRate, emailConsent, payoutWallet || null, now, now).run();
   } catch (err) {
     if (String(err).includes("UNIQUE")) return jsonError(c, 409, "email_taken", "This email is already registered.");
     throw err;
   }
-  return c.json({ freelancer: { id, name, email, skills, createdAt: now }, message: "Registered. You will receive task offer emails when matched." }, 201);
+  return c.json({
+    freelancer: { id, name, email, skills, emailConsent: Boolean(emailConsent), createdAt: now },
+    message: emailConsent
+      ? "Registered. You will receive task offer emails when matched."
+      : "Registered without email consent. You will not be matched to tasks until you opt in to offer emails.",
+  }, 201);
 });
 
-// Agent: describe an unfulfilled task → platform finds best freelancer and sends offer email
+// Admin: verify a freelancer (required before they can be matched)
+app.post("/api/v1/admin/freelancers/:id/verify", async (c) => {
+  if (!adminAuthorized(c)) return jsonError(c, 403, "admin_required", "A valid X-Admin-Key is required.");
+  const result = await c.env.DB.prepare(
+    "UPDATE freelancers SET verified = 1, updated_at = ? WHERE id = ?",
+  ).bind(nowIso(), c.req.param("id")).run();
+  if (!result.meta.changes) return jsonError(c, 404, "freelancer_not_found", "No freelancer uses that id.");
+  return c.json({ freelancer: { id: c.req.param("id"), verified: true } });
+});
+
+// Agent: no suitable marketplace skill → platform matches the best eligible
+// freelancer and sends a token-secured offer email.
 app.post("/api/v1/tasks/match", requireAgent, async (c) => {
   const body = await readJsonBody(c, 10_000);
   if (!body || typeof body !== "object") return jsonError(c, 422, "invalid_body", "Body must be JSON object.");
@@ -501,15 +585,34 @@ app.post("/api/v1/tasks/match", requireAgent, async (c) => {
   const title = String(input.title || "").trim();
   const description = String(input.description || "").trim();
   const requiredSkills = Array.isArray(input.requiredSkills) ? input.requiredSkills.map(String).map((s) => s.trim().toLowerCase()).filter(Boolean) : [];
-  const budgetUsd = input.budgetUsd ? String(Number(input.budgetUsd).toFixed(2)) : null;
+  const budgetUsd = input.budgetUsd === null || input.budgetUsd === undefined || String(input.budgetUsd).trim() === ""
+    ? null
+    : String(Number(input.budgetUsd).toFixed(2));
   if (!title || title.length > 200) return jsonError(c, 422, "invalid_title", "Title required, max 200 chars.");
   if (description.length < 30 || description.length > 2000) return jsonError(c, 422, "invalid_description", "Description must be 30–2000 chars.");
-  // Find matching available freelancers by skill overlap
+  if (budgetUsd !== null && (!Number.isFinite(Number(budgetUsd)) || Number(budgetUsd) <= 0 || Number(budgetUsd) > 10_000)) {
+    return jsonError(c, 422, "invalid_budget", "budgetUsd must be between 0 and 10000.");
+  }
+
+  // Replay-safe task creation for agents.
+  const idemKey = (c.req.header("Idempotency-Key") || "").trim() || null;
+  if (idemKey) {
+    const existing = await c.env.DB.prepare(
+      "SELECT id, status, offer_expires_at FROM task_requests WHERE agent_id = ? AND idempotency_key = ?",
+    ).bind(c.get("agent").id, idemKey).first<{ id: string; status: string; offer_expires_at: string }>();
+    if (existing) {
+      c.header("X-Idempotent-Replay", "true");
+      return c.json({ taskId: existing.id, status: existing.status, offerExpiresAt: existing.offer_expires_at, replay: true });
+    }
+  }
+
+  // Eligibility: available + verified + explicit email consent + valid email.
   const allFreelancers = await c.env.DB.prepare(
-    "SELECT * FROM freelancers WHERE availability = 'available' AND verified = 1 ORDER BY created_at",
+    "SELECT * FROM freelancers WHERE availability = 'available' AND verified = 1 AND email_consent = 1 ORDER BY created_at",
   ).all<FreelancerRecord>();
   const tokens = [...new Set([...requiredSkills, ...title.toLowerCase().match(/[a-z0-9]{3,}/g) || []])];
   const ranked = allFreelancers.results
+    .filter((f) => EMAIL_RE.test(f.email))
     .map((f) => {
       const fSkills = parseJson<string[]>(f.skills_json, []);
       const matched = tokens.filter((t) => fSkills.some((s) => s.includes(t) || t.includes(s)));
@@ -524,30 +627,44 @@ app.post("/api/v1/tasks/match", requireAgent, async (c) => {
   const taskId = crypto.randomUUID();
   const now = nowIso();
   const expiresAt = new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString();
-  await c.env.DB.prepare(
-    `INSERT INTO task_requests
-       (id, agent_id, title, description, required_skills_json, budget_usd,
-        status, matched_freelancer_id, offer_expires_at, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, 'matching', ?, ?, ?, ?)`,
-  ).bind(taskId, c.get("agent").id, title, description, JSON.stringify(requiredSkills), budgetUsd, best.id, expiresAt, now, now).run();
-  // Send offer email (fire and forget)
+  // Secure action token: raw value goes only into the offer email; DB stores the hash.
+  const actionToken = randomToken("task");
+  const actionTokenHash = await sha256(actionToken);
+  try {
+    await c.env.DB.prepare(
+      `INSERT INTO task_requests
+         (id, agent_id, title, description, required_skills_json, budget_usd,
+          status, matched_freelancer_id, offer_expires_at, action_token_hash, idempotency_key, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, 'matching', ?, ?, ?, ?, ?, ?)`,
+    ).bind(taskId, c.get("agent").id, title, description, JSON.stringify(requiredSkills), budgetUsd, best.id, expiresAt, actionTokenHash, idemKey, now, now).run();
+  } catch (err) {
+    if (String(err).includes("UNIQUE")) return jsonError(c, 409, "duplicate_task", "Another request used this idempotency key.");
+    throw err;
+  }
+
+  // Send the offer email synchronously: the task is only 'offered' if the
+  // provider accepted the message; otherwise it is 'email_failed'.
   const origin = new URL(c.req.url).origin;
-  c.executionCtx.waitUntil(
-    sendOfferEmail(c.env, {
-      to: best.email,
-      taskId,
-      taskTitle: title,
-      description,
-      budgetUsd,
-      origin,
-    }).then(async (result) => {
-      await c.env.DB.prepare(
-        `INSERT INTO email_log (id, task_request_id, recipient_email, template, status, provider_id, created_at)
-         VALUES (?, ?, ?, 'offer', ?, ?, ?)`,
-      ).bind(crypto.randomUUID(), taskId, best.email, result.ok ? "sent" : "failed", result.id, nowIso()).run();
-      await c.env.DB.prepare("UPDATE task_requests SET status = 'offered', updated_at = ? WHERE id = ?").bind(nowIso(), taskId).run();
-    }),
-  );
+  const emailResult = await sendOfferEmail(c.env, {
+    to: best.email,
+    taskId,
+    taskTitle: title,
+    description,
+    budgetUsd,
+    origin,
+    token: actionToken,
+    idempotencyKey: `offer:${taskId}:1`,
+  });
+  await c.env.DB.prepare(
+    `INSERT INTO email_log (id, task_request_id, recipient_email, template, status, provider_id, created_at)
+     VALUES (?, ?, ?, 'offer', ?, ?, ?)`,
+  ).bind(crypto.randomUUID(), taskId, best.email, emailResult.ok ? "sent" : "failed", emailResult.id, nowIso()).run();
+  const newStatus = emailResult.ok ? "offered" : "email_failed";
+  await c.env.DB.prepare("UPDATE task_requests SET status = ?, updated_at = ? WHERE id = ?").bind(newStatus, nowIso(), taskId).run();
+
+  if (!emailResult.ok) {
+    return jsonError(c, 502, "offer_email_failed", "The offer email could not be sent. The task is stored and the email can be retried.", { taskId, status: "email_failed" });
+  }
   return c.json({
     taskId,
     status: "offered",
@@ -557,78 +674,221 @@ app.post("/api/v1/tasks/match", requireAgent, async (c) => {
   }, 201);
 });
 
-// Freelancer accepts a task offer (email link or API call)
-app.post("/api/v1/tasks/:id/accept", async (c) => {
-  const task = await c.env.DB.prepare(
-    "SELECT tr.*, f.email AS freelancer_email FROM task_requests tr JOIN freelancers f ON f.id = tr.matched_freelancer_id WHERE tr.id = ?",
-  ).bind(c.req.param("id")).first<TaskRequestRecord & { freelancer_email: string }>();
+// Admin: retry a failed offer email. Rotates the token (only the hash was
+// stored) and uses a fresh provider idempotency key per attempt.
+app.post("/api/v1/admin/tasks/:id/retry-email", async (c) => {
+  if (!adminAuthorized(c)) return jsonError(c, 403, "admin_required", "A valid X-Admin-Key is required.");
+  const task = await loadTaskWithFreelancer(c, c.req.param("id"));
   if (!task) return jsonError(c, 404, "task_not_found", "Task not found.");
-  if (task.status !== "offered") return jsonError(c, 409, "wrong_status", `Task is already '${task.status}'.`);
-  if (task.offer_expires_at && new Date(task.offer_expires_at) < new Date()) {
-    return jsonError(c, 410, "offer_expired", "This offer has expired.");
+  const legacyMissingHash = !task.action_token_hash;
+  const legacyRetryable = legacyMissingHash && task.status === "offered";
+  if (task.status !== "email_failed" && !legacyRetryable) {
+    return jsonError(c, 409, "wrong_status", `Only 'email_failed' tasks can retry the offer email (or legacy 'offered' tasks missing a token hash); current: '${task.status}'.`);
   }
-  await c.env.DB.prepare("UPDATE task_requests SET status = 'accepted', updated_at = ? WHERE id = ?").bind(nowIso(), task.id).run();
-  return c.json({ taskId: task.id, status: "accepted", message: "Task accepted. Submit your work via POST /api/v1/tasks/:id/deliver." });
+  const sent = await c.env.DB.prepare(
+    "SELECT COUNT(*) AS count FROM email_log WHERE task_request_id = ? AND template = 'offer' AND status = 'sent'",
+  ).bind(task.id).first<{ count: number }>();
+  if (!legacyMissingHash && (sent?.count || 0) > 0) {
+    return jsonError(c, 409, "already_sent", "An offer email was already sent for this task.");
+  }
+  const attempts = await c.env.DB.prepare(
+    "SELECT COUNT(*) AS count FROM email_log WHERE task_request_id = ? AND template = 'offer'",
+  ).bind(task.id).first<{ count: number }>();
+  const attempt = (attempts?.count || 0) + 1;
+  if (legacyMissingHash) {
+    await c.env.DB.prepare(
+      "UPDATE email_log SET status = 'superseded' WHERE task_request_id = ? AND template = 'offer' AND status = 'sent'",
+    ).bind(task.id).run();
+  }
+  const actionToken = randomToken("task");
+  await c.env.DB.prepare("UPDATE task_requests SET action_token_hash = ?, updated_at = ? WHERE id = ?")
+    .bind(await sha256(actionToken), nowIso(), task.id).run();
+  const origin = new URL(c.req.url).origin;
+  const emailResult = await sendOfferEmail(c.env, {
+    to: task.freelancer_email,
+    taskId: task.id,
+    taskTitle: task.title,
+    description: task.description,
+    budgetUsd: task.budget_usd,
+    origin,
+    token: actionToken,
+    idempotencyKey: `offer:${task.id}:${attempt}`,
+  });
+  await c.env.DB.prepare(
+    `INSERT INTO email_log (id, task_request_id, recipient_email, template, status, provider_id, created_at)
+     VALUES (?, ?, ?, 'offer', ?, ?, ?)`,
+  ).bind(crypto.randomUUID(), task.id, task.freelancer_email, emailResult.ok ? "sent" : "failed", emailResult.id, nowIso()).run();
+  const newStatus = emailResult.ok ? "offered" : "email_failed";
+  await c.env.DB.prepare("UPDATE task_requests SET status = ?, updated_at = ? WHERE id = ?").bind(newStatus, nowIso(), task.id).run();
+  if (!emailResult.ok) return jsonError(c, 502, "offer_email_failed", "The retry failed. The task remains 'email_failed'.", { taskId: task.id });
+  return c.json({ taskId: task.id, status: "offered", attempt });
 });
 
-// Freelancer delivers work (URL + note)
-app.post("/api/v1/tasks/:id/deliver", async (c) => {
-  const body = await readJsonBody(c, 5_000);
+// Freelancer: read-only offer review page (linked from the email).
+// Never changes state — link scanners cannot accept a task via GET.
+app.get("/api/v1/tasks/:id/offer", async (c) => {
+  const task = await loadTaskWithFreelancer(c, c.req.param("id"));
+  if (!task) return jsonError(c, 404, "task_not_found", "Task not found.");
+  const tokenErr = await checkTaskToken(c, task, c.req.query("token"));
+  if (tokenErr) return tokenErr;
+  if (task.status === "expired" || (task.status === "offered" && offerExpired(task))) {
+    await markExpired(c, task);
+    return jsonError(c, 410, "offer_expired", "This offer has expired.");
+  }
+  return c.json({
+    task: {
+      id: task.id,
+      title: task.title,
+      description: task.description,
+      budgetUsd: task.budget_usd,
+      requiredSkills: parseJson<string[]>(task.required_skills_json, []),
+      status: task.status,
+      offerExpiresAt: task.offer_expires_at,
+    },
+    readOnly: true,
+    howToAccept: `POST /api/v1/tasks/${task.id}/accept with JSON body {"token": "<your token>"}.`,
+  });
+});
+
+// Freelancer accepts a task offer — requires the task token.
+app.post("/api/v1/tasks/:id/accept", async (c) => {
+  const body = await readJsonBody(c, 5_000).catch(() => null);
   const input = body && typeof body === "object" ? body as Record<string, unknown> : {};
+  const task = await loadTaskWithFreelancer(c, c.req.param("id"));
+  if (!task) return jsonError(c, 404, "task_not_found", "Task not found.");
+  const tokenErr = await checkTaskToken(c, task, String(input.token ?? c.req.header("X-Task-Token") ?? ""));
+  if (tokenErr) return tokenErr;
+  if (task.status !== "offered") {
+    if (task.status === "expired") return jsonError(c, 410, "offer_expired", "This offer has expired.");
+    return jsonError(c, 409, "wrong_status", `Task is already '${task.status}'.`);
+  }
+  if (offerExpired(task)) {
+    await markExpired(c, task);
+    return jsonError(c, 410, "offer_expired", "This offer has expired.");
+  }
+  const result = await c.env.DB.prepare(
+    "UPDATE task_requests SET status = 'accepted', accepted_at = ?, updated_at = ? WHERE id = ? AND status = 'offered'",
+  ).bind(nowIso(), nowIso(), task.id).run();
+  if (!result.meta.changes) return jsonError(c, 409, "wrong_status", "Task was already accepted.");
+  return c.json({ taskId: task.id, status: "accepted", message: "Task accepted. Submit your work via POST /api/v1/tasks/:id/deliver with the same token." });
+});
+
+// Freelancer delivers work — requires the same task token.
+app.post("/api/v1/tasks/:id/deliver", async (c) => {
+  const body = await readJsonBody(c, 10_000);
+  const input = body && typeof body === "object" ? body as Record<string, unknown> : {};
+  const task = await loadTaskWithFreelancer(c, c.req.param("id"));
+  if (!task) return jsonError(c, 404, "task_not_found", "Task not found.");
+  const tokenErr = await checkTaskToken(c, task, String(input.token ?? c.req.header("X-Task-Token") ?? ""));
+  if (tokenErr) return tokenErr;
   const submissionUrl = String(input.submissionUrl || "").trim();
   const note = String(input.note || "").trim();
   if (!submissionUrl) return jsonError(c, 422, "url_required", "Provide submissionUrl with the deliverable link.");
-  try { new URL(submissionUrl); } catch { return jsonError(c, 422, "invalid_url", "submissionUrl must be a valid URL."); }
-  const task = await c.env.DB.prepare("SELECT * FROM task_requests WHERE id = ?").bind(c.req.param("id")).first<TaskRequestRecord>();
-  if (!task) return jsonError(c, 404, "task_not_found", "Task not found.");
-  if (task.status !== "accepted") return jsonError(c, 409, "wrong_status", `Task must be 'accepted' to deliver; current: '${task.status}'.`);
-  await c.env.DB.prepare(
-    "UPDATE task_requests SET status = 'delivered', submission_url = ?, submission_note = ?, updated_at = ? WHERE id = ?",
-  ).bind(submissionUrl, note || null, nowIso(), task.id).run();
+  if (submissionUrl.length > 2048 || !isSafeHttpUrl(submissionUrl)) {
+    return jsonError(c, 422, "invalid_url", "submissionUrl must be a valid http(s) URL under 2048 characters.");
+  }
+  if (note.length > 2000) return jsonError(c, 422, "note_too_long", "Delivery note must be at most 2000 characters.");
+  if (task.status !== "accepted") {
+    return jsonError(c, 409, "wrong_status", `Task must be 'accepted' to deliver; current: '${task.status}'.`);
+  }
+  const result = await c.env.DB.prepare(
+    "UPDATE task_requests SET status = 'delivered', submission_url = ?, submission_note = ?, delivered_at = ?, updated_at = ? WHERE id = ? AND status = 'accepted'",
+  ).bind(submissionUrl, note || null, nowIso(), nowIso(), task.id).run();
+  if (!result.meta.changes) return jsonError(c, 409, "wrong_status", "Task was already delivered.");
   return c.json({ taskId: task.id, status: "delivered", message: "Delivery recorded. Awaiting admin approval and payment." });
 });
 
-// Admin approves delivery and triggers payment
+// Admin approves delivery and triggers payment.
+// State: delivered → payment_pending → paid (only with a confirmed tx hash)
+//                                    ↘ payment_failed (safe to retry)
+// Duplicate approval after success replays the stored result. Payment can
+// never run twice: the durable payout row is the concurrency guard.
 app.post("/api/v1/admin/tasks/:id/approve-and-pay", async (c) => {
   if (!adminAuthorized(c)) return jsonError(c, 403, "admin_required", "A valid X-Admin-Key is required.");
-  const task = await c.env.DB.prepare(
-    `SELECT tr.*, f.email AS freelancer_email, f.name AS freelancer_name
-     FROM task_requests tr JOIN freelancers f ON f.id = tr.matched_freelancer_id WHERE tr.id = ?`,
-  ).bind(c.req.param("id")).first<TaskRequestRecord & { freelancer_email: string; freelancer_name: string }>();
+  const task = await loadTaskWithFreelancer(c, c.req.param("id"));
   if (!task) return jsonError(c, 404, "task_not_found", "Task not found.");
-  if (task.status !== "delivered") return jsonError(c, 409, "wrong_status", "Task must be 'delivered' to approve.");
-  // Pull payout wallet from request body or freelancer record
+
+  // Replay-safe duplicate approval after success.
+  if (task.status === "paid") {
+    return c.json({ taskId: task.id, status: "paid", amountUsd: task.budget_usd, txHash: task.payment_tx_hash, replay: true });
+  }
+  if (task.status === "payment_pending") {
+    return jsonError(c, 409, "payment_in_progress", "A payment attempt is already in progress for this task.");
+  }
+  if (task.status !== "delivered" && task.status !== "payment_failed") {
+    return jsonError(c, 409, "wrong_status", "Task must be 'delivered' (or 'payment_failed' for a retry) to approve.");
+  }
+
   const body = await readJsonBody(c, 2_000).catch(() => null);
   const input = body && typeof body === "object" ? body as Record<string, unknown> : {};
-  const payoutWallet = String(input.payoutWallet || "").trim();
-  if (!payoutWallet || !/^0x[a-fA-F0-9]{40}$/.test(payoutWallet)) {
-    return jsonError(c, 422, "payout_wallet_required", "Provide payoutWallet (EVM address) to send USDC to freelancer.");
+  const payoutWallet = String(input.payoutWallet || "").trim() || task.freelancer_payout_wallet || "";
+  if (!WALLET_RE.test(payoutWallet)) {
+    return jsonError(c, 422, "payout_wallet_required", "Provide payoutWallet (EVM address), or register one on the freelancer profile.");
   }
   const amountUsd = task.budget_usd ?? "0.00";
   if (Number(amountUsd) <= 0) return jsonError(c, 422, "no_budget", "Task has no budget set. Cannot pay.");
-  await c.env.DB.prepare("UPDATE task_requests SET status = 'paid', updated_at = ? WHERE id = ?").bind(nowIso(), task.id).run();
-  // Fire payment + email in background
-  c.executionCtx.waitUntil(
-    sendUSDCPayment(c.env, payoutWallet, amountUsd).then(async (result) => {
-      await sendPaymentEmail(c.env, {
+
+  const now = nowIso();
+  // Durable payout record — one per task.
+  await c.env.DB.prepare(
+    `INSERT OR IGNORE INTO task_payouts (id, task_request_id, recipient_wallet, amount_usd, network, status, attempts, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, 'pending', 0, ?, ?)`,
+  ).bind(crypto.randomUUID(), task.id, payoutWallet, amountUsd, c.env.X402_NETWORK, now, now).run();
+  // Concurrency guard: claim the payout row; a parallel attempt gets 0 changes.
+  const claim = await c.env.DB.prepare(
+    `UPDATE task_payouts SET status = 'processing', attempts = attempts + 1, recipient_wallet = ?, updated_at = ?
+      WHERE task_request_id = ? AND status IN ('pending', 'failed')`,
+  ).bind(payoutWallet, nowIso(), task.id).run();
+  if (!claim.meta.changes) {
+    return jsonError(c, 409, "payment_in_progress", "A payment attempt is already in progress or settled for this task.");
+  }
+  await c.env.DB.prepare("UPDATE task_requests SET status = 'payment_pending', updated_at = ? WHERE id = ?").bind(nowIso(), task.id).run();
+
+  const payResult = await sendUSDCPayment(c.env, payoutWallet, amountUsd);
+
+  if (payResult.ok && payResult.txHash) {
+    const paidAt = nowIso();
+    await c.env.DB.batch([
+      c.env.DB.prepare("UPDATE task_payouts SET status = 'settled', tx_hash = ?, error = NULL, updated_at = ? WHERE task_request_id = ?")
+        .bind(payResult.txHash, paidAt, task.id),
+      c.env.DB.prepare("UPDATE task_requests SET status = 'paid', paid_at = ?, payment_tx_hash = ?, payment_error = NULL, updated_at = ? WHERE id = ?")
+        .bind(paidAt, payResult.txHash, paidAt, task.id),
+    ]);
+    // Confirmation email only after confirmed success; failure to email does
+    // not affect the paid state.
+    c.executionCtx.waitUntil(
+      sendPaymentEmail(c.env, {
         to: task.freelancer_email,
+        taskId: task.id,
         taskTitle: task.title,
         amountUsd,
-        txHash: result.txHash,
-      });
-      await c.env.DB.prepare(
-        `INSERT INTO email_log (id, task_request_id, recipient_email, template, status, created_at)
-         VALUES (?, ?, ?, 'payment_sent', 'sent', ?)`,
-      ).bind(crypto.randomUUID(), task.id, task.freelancer_email, nowIso()).run();
-    }),
-  );
-  return c.json({
-    taskId: task.id,
-    status: "paid",
-    amountUsd,
-    recipientWallet: payoutWallet,
-    message: `Payment of $${amountUsd} USDC triggered. Email confirmation sent to ${task.freelancer_name}.`,
-  });
+        txHash: payResult.txHash,
+      }).then(async (emailResult) => {
+        await c.env.DB.prepare(
+          `INSERT INTO email_log (id, task_request_id, recipient_email, template, status, provider_id, created_at)
+           VALUES (?, ?, ?, 'payment_sent', ?, ?, ?)`,
+        ).bind(crypto.randomUUID(), task.id, task.freelancer_email, emailResult.ok ? "sent" : "failed", emailResult.id, nowIso()).run();
+      }),
+    );
+    return c.json({
+      taskId: task.id,
+      status: "paid",
+      amountUsd,
+      recipientWallet: payoutWallet,
+      txHash: payResult.txHash,
+      message: `Payment of $${amountUsd} USDC confirmed. Notification queued for ${task.freelancer_name}.`,
+    });
+  }
+
+  // Failure: durable failed state, internal error detail only, safe retry later.
+  const internalError = String(payResult.error || "payment provider error").slice(0, 300);
+  await c.env.DB.batch([
+    c.env.DB.prepare("UPDATE task_payouts SET status = 'failed', error = ?, updated_at = ? WHERE task_request_id = ?")
+      .bind(internalError, nowIso(), task.id),
+    c.env.DB.prepare("UPDATE task_requests SET status = 'payment_failed', payment_error = 'payment_provider_error', updated_at = ? WHERE id = ?")
+      .bind(nowIso(), task.id),
+  ]);
+  return jsonError(c, 502, "payment_failed", "The payment could not be completed. The task is marked payment_failed and can be retried.", { taskId: task.id, status: "payment_failed" });
 });
 
 // Payout status — sellers can check their earnings
