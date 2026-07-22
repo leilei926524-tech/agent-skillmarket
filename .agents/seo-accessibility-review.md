@@ -37,7 +37,7 @@ Compatibility API boundary: https://gokui.mesalaunch.com/
 
 ## QA evidence
 
-Production static builds use the same-origin API at `https://tryexpertos.com`; the old `gokui.mesalaunch.com` endpoint remains available for compatibility checks.
+Production static builds use the same-origin API at `https://tryexpertos.com`; the old `gokui.mesalaunch.com` endpoint remains available for compatibility checks. Worker version `a20803da-8019-4685-9aaa-2d9475619cdc` serves the verified release.
 
 - `npm run build`: passed; 12 static pages generated.
 - Desktop 1440×900: homepage, store, privacy, terms, and payment activity inspected.
@@ -48,6 +48,10 @@ Production static builds use the same-origin API at `https://tryexpertos.com`; t
 - Failure path: mocked catalog HTTP 503 produced a localized live-region alert; removing the mock restored all three live Skills.
 - Live API during local QA returned three Skills, one settled invocation, and a Base mainnet transaction receipt.
 - Browser console: no application errors on normal paths. Next.js emitted only font-preload timing warnings.
+- Production HTTPS: two consecutive checks returned `200` for the homepage, health, manifest, every primary public route, robots, sitemap, and `security.txt`; `www.tryexpertos.com` and the old custom domain also returned `200`.
+- Production static integrity: root HTML SHA-256 matched the local export; canonical, Open Graph URL, sitemap, robots, manifest origins, and `security.txt` point to `tryexpertos.com`.
+- Production responsive QA after hydration: nine 390×844 routes and six 1440×900 routes had zero horizontal overflow and zero broken images.
+- Production failure boundaries: invalid public price query `422`, missing Agent key `401`, missing admin key `403`, and unknown API route `404`.
 
 Screenshots are stored locally under `output/playwright/` and intentionally ignored by Git.
 

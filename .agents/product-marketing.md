@@ -1,6 +1,6 @@
 # GOKUI product marketing context
 
-Version: 1.2
+Version: 1.3
 Updated: 2026-07-22
 
 ## What the product is
@@ -87,6 +87,7 @@ As of 2026-07-22, the production API reports:
 - 1 settled invocation.
 - Base mainnet (`eip155:8453`).
 - A settled 0.01 USDC payment with an onchain transaction hash.
+- The canonical product and API origin is `https://tryexpertos.com`; the old custom domain and Worker URL are compatibility paths.
 
 Do not present these numbers as adoption, revenue growth, or product-market fit.
 
@@ -121,6 +122,7 @@ Technical documentation may still use exact protocol terms such as `HTTP 402`, `
 
 ## Changelog
 
+- 2026-07-22: Version 1.3 made `tryexpertos.com` the verified canonical product and API origin, recorded the deployed privacy and recovery model, and retained the existing settlement as technical-path proof rather than customer traction.
 - 2026-07-22: Version 1.2 fixed the product branches: Agent-only automatic payment, guarded AI installation for free curated Skills, private no-login submission recovery, mixed recommendations, and 24-hour paid-result retention without stored plaintext input.
 - 2026-07-22: Version 1.1 corrected the catalog to 15 Skills, separated paid APIs from pinned source listings, removed the unsupported “continuously updated” promise, and recorded self-revocation, relevant-only recommendations, per-Skill prices, and the daily budget boundary.
 - 2026-07-22: Created the first shared positioning, audience, proof, voice, and public-copy guardrails for the Chinese site rewrite.
