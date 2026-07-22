@@ -1,0 +1,21 @@
+{
+  "name": "@gokui/mcp-skills",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "MCP server giving an agent tools to search and invoke paid GOKUI marketplace skills, paying automatically via x402.",
+  "main": "server.mjs",
+  "bin": {
+    "gokui-mcp-skills": "server.mjs"
+  },
+  "scripts": {
+    "start": "node server.mjs"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "@x402/evm": "^2.19.0",
+    "@x402/fetch": "^2.19.0",
+    "viem": "^2.38.0",
+    "zod": "^3.23.0"
+  }
+}
