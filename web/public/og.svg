@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1734" height="907" viewBox="0 0 1734 907" role="img" aria-labelledby="title desc">
+  <title id="title">ExpertOS — Expert Skills for AI Agents</title>
+  <desc id="desc">Put expert know-how to work in your AI.</desc>
+  <defs>
+    <linearGradient id="background" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#dfeeff"/>
+      <stop offset="1" stop-color="#c8ddf6"/>
+    </linearGradient>
+    <linearGradient id="pill" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#6d5dfc"/>
+      <stop offset="1" stop-color="#2235c9"/>
+    </linearGradient>
+    <filter id="shadow" x="-30%" y="-50%" width="160%" height="220%">
+      <feDropShadow dx="0" dy="24" stdDeviation="20" flood-color="#1b2f8e" flood-opacity=".26"/>
+    </filter>
+    <pattern id="grid" width="72" height="72" patternUnits="userSpaceOnUse">
+      <path d="M72 0H0V72" fill="none" stroke="#14287a" stroke-opacity=".08" stroke-width="1"/>
+    </pattern>
+  </defs>
+  <rect width="1734" height="907" fill="url(#background)"/>
+  <rect x="42" y="54" width="1650" height="798" fill="url(#grid)" stroke="#14287a" stroke-opacity=".24" stroke-width="2"/>
+
+  <g stroke="#263ecb" stroke-width="2" fill="none" opacity=".72">
+    <path d="M18 54h210M42 26v210M1506 54h210M1692 26v210M18 852h210M42 724v156M1506 852h210M1692 724v156"/>
+    <path d="M28 54h28M42 40v28M1678 54h28M1692 40v28M28 852h28M42 838v28M1678 852h28M1692 838v28" stroke-width="5"/>
+  </g>
+
+  <g font-family="Inter, Arial, Helvetica, sans-serif" fill="#080b16">
+    <text x="104" y="246" font-size="156" font-weight="850" letter-spacing="-10">Expert<tspan fill="#5847ed">OS</tspan></text>
+    <text x="108" y="392" font-size="74" font-weight="760" letter-spacing="-3">Put expert know-how</text>
+    <text x="108" y="480" font-size="74" font-weight="760" letter-spacing="-3">to work in your AI.</text>
+    <text x="112" y="608" font-size="30" font-weight="560" fill="#313a57">Reviewed methods. Clear sources. Agent-native payment.</text>
+    <text x="112" y="797" font-size="25" font-weight="700" letter-spacing="1.5" fill="#5847ed">TRYEXPERTOS.COM</text>
+  </g>
+
+  <g transform="translate(1180 382) rotate(-7)" filter="url(#shadow)">
+    <rect width="396" height="172" rx="86" fill="url(#pill)"/>
+    <rect x="12" y="12" width="372" height="148" rx="74" fill="none" stroke="#a9baff" stroke-opacity=".64" stroke-width="3"/>
+    <text x="198" y="106" text-anchor="middle" font-family="Inter, Arial, Helvetica, sans-serif" font-size="46" font-weight="800" fill="#fff">HTTP 402</text>
+  </g>
+
+  <g transform="translate(1398 682)" stroke="#5847ed" fill="none" opacity=".82">
+    <rect x="0" y="0" width="72" height="72" stroke-width="2"/>
+    <path d="M36-28v128M-28 36h128" stroke-dasharray="7 9"/>
+    <path d="M18 36h36M36 18v36" stroke-width="4"/>
+  </g>
+</svg>

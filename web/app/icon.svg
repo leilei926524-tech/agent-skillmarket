@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" role="img" aria-label="ExpertOS">
+  <defs>
+    <linearGradient id="icon-bg" x1="8" y1="6" x2="56" y2="60" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#6d5dfc"/>
+      <stop offset="1" stop-color="#2f36c7"/>
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="16" fill="url(#icon-bg)"/>
+  <path d="M18 15h31v9H28v7h17v8H28v7h22v9H18V15Z" fill="#fff"/>
+</svg>

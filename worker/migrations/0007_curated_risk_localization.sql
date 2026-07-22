@@ -1,0 +1,15 @@
+UPDATE skills SET localizations_json = json_set(localizations_json, '$."zh-CN".riskSummary', '由 GOKUI 维护的确定性示例，不会调用外部工具，也不需要账号或密钥。') WHERE slug = 'deal-desk-discount-guardrails';
+UPDATE skills SET localizations_json = json_set(localizations_json, '$."zh-CN".riskSummary', '由 GOKUI 维护的操作清单，不会调用外部工具；输出不构成法律或税务建议。') WHERE slug = 'cross-border-invoice-checklist';
+UPDATE skills SET localizations_json = json_set(localizations_json, '$."zh-CN".riskSummary', '由 GOKUI 维护的启发式检查，只识别常见模式，不能替代完整安全审查。') WHERE slug = 'prompt-injection-triage';
+UPDATE skills SET localizations_json = json_set(localizations_json, '$."zh-CN".riskSummary', '说明与参考资料型 Skill。在线研究仍需核验来源，并妥善处理访谈和客户资料。') WHERE slug = 'customer-research';
+UPDATE skills SET localizations_json = json_set(localizations_json, '$."zh-CN".riskSummary', '说明与参考资料型 Skill。发布前仍需人工核对事实、证据与承诺。') WHERE slug = 'conversion-copywriting';
+UPDATE skills SET localizations_json = json_set(localizations_json, '$."zh-CN".riskSummary', '规划本身风险较低，但实际接入分析工具可能改动生产埋点并向第三方传输用户数据。') WHERE slug = 'analytics-tracking-plan';
+UPDATE skills SET localizations_json = json_set(localizations_json, '$."zh-CN".riskSummary', '包含一个已审查、只读取本地 HTML 的脚本；运行任何附带脚本前仍应先查看内容。') WHERE slug = 'web-quality-audit';
+UPDATE skills SET localizations_json = json_set(localizations_json, '$."zh-CN".riskSummary', '说明与参考资料型 Skill；已审版本没有需要自动执行的外部脚本。') WHERE slug = 'vercel-react-best-practices';
+UPDATE skills SET localizations_json = json_set(localizations_json, '$."zh-CN".riskSummary', '说明与参考资料型 Skill；已审版本无需联网拉取或执行外部工具。') WHERE slug = 'vercel-composition-patterns';
+UPDATE skills SET localizations_json = json_set(localizations_json, '$."zh-CN".riskSummary', '说明型 Skill。它会建议修改界面代码与视觉素材，应用到生产前应预览并人工复核。') WHERE slug = 'distinctive-frontend-design';
+UPDATE skills SET localizations_json = json_set(localizations_json, '$."zh-CN".riskSummary', '会指导创建可访问外部 API 的服务。必须限制工具权限、保护凭证，并在部署前审查代码。') WHERE slug = 'mcp-server-builder';
+UPDATE skills SET localizations_json = json_set(localizations_json, '$."zh-CN".riskSummary', '需要读取仓库、运行 shell 并写入报告。用于风险审查，不应在含敏感代码的环境中盲目运行。') WHERE slug = 'differential-security-review';
+UPDATE skills SET localizations_json = json_set(localizations_json, '$."zh-CN".riskSummary', '需要读取仓库、运行 shell 并写入报告。它只做风险筛选，不等于主动漏洞扫描。') WHERE slug = 'supply-chain-risk-auditor';
+UPDATE skills SET localizations_json = json_set(localizations_json, '$."zh-CN".riskSummary', '需要读取 Elastic 中的遥测数据。应使用只读权限，并避免把提示词、用户内容或凭证写入报告。') WHERE slug = 'llm-agent-observability';
+UPDATE skills SET localizations_json = json_set(localizations_json, '$."zh-CN".riskSummary', '可能涉及 shell、容器、云服务与生产配置。运行命令和修改基础设施前必须人工确认。') WHERE slug = 'nvidia-rag-blueprint';

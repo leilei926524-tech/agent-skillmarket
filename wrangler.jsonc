@@ -1,0 +1,46 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "expertos-agent-skillmarket",
+  "main": "worker/src/index.ts",
+  "compatibility_date": "2026-07-21",
+  "compatibility_flags": ["nodejs_compat"],
+  "workers_dev": true,
+  "preview_urls": false,
+  "triggers": {
+    "crons": ["0 * * * *"]
+  },
+  "routes": [
+    {
+      "pattern": "tryexpertos.com",
+      "custom_domain": true
+    },
+    {
+      "pattern": "www.tryexpertos.com",
+      "custom_domain": true
+    },
+    {
+      "pattern": "gokui.mesalaunch.com",
+      "custom_domain": true
+    }
+  ],
+  "assets": {
+    "directory": "./web/out",
+    "binding": "ASSETS",
+    "run_worker_first": ["/api/*", "/.well-known/agent-skills.json"]
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "expertos-marketplace",
+      "database_id": "a45ae485-f057-40d3-8916-80acc3e96c43",
+      "migrations_dir": "worker/migrations"
+    }
+  ],
+  "vars": {
+    "APP_ENV": "production",
+    "X402_NETWORK": "eip155:8453",
+    "X402_FACILITATOR_URL": "https://api.cdp.coinbase.com/platform/v2/x402",
+    "X402_PRICE_USD": "0.01",
+    "X402_PAY_TO": "0x8cca33bc691d05feb5470f74a30a85b0d93568b3"
+  }
+}

@@ -1,0 +1,58 @@
+export type PublicSkill = {
+  id: string;
+  slug: string;
+  title: string;
+  description: string;
+  category: string;
+  tags: string[];
+  searchAliases: string[];
+  localizations: Record<string, { title?: string; description?: string; category?: string; riskSummary?: string }>;
+  version: string;
+  license: string;
+  publisher: string;
+  price: { amount: string; currency: string; network: string };
+  risk: { level: string; summary: string };
+  invokes: number;
+  invokeUrl: string | null;
+  inputSchema: Record<string, unknown> | null;
+  exampleInput: Record<string, unknown> | null;
+  delivery: { type: "paid_api" | "external_source"; callable: boolean };
+  provenance: {
+    listingKind: "platform" | "publisher" | "curated";
+    curatedBy: string | null;
+    publisherVerified: boolean;
+    source: { url: string; commit: string | null; path: string | null } | null;
+  };
+  updatedAt: string;
+};
+
+export const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "") || "";
+export const API_ORIGIN = API_BASE || "https://tryexpertos.com";
+
+export function localizedSkill(skill: PublicSkill, locale: string) {
+  const localized = skill.localizations?.[locale] || {};
+  return {
+    title: localized.title || skill.title,
+    description: localized.description || skill.description,
+    category: localized.category || skill.category,
+    riskSummary: localized.riskSummary || skill.risk.summary,
+  };
+}
+
+export async function api<T>(path: string, init?: RequestInit): Promise<T> {
+  const response = await fetch(`${API_BASE}${path}`, {
+    ...init,
+    headers: { "Content-Type": "application/json", ...(init?.headers || {}) },
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    const message = data?.error?.message || `Request failed with HTTP ${response.status}`;
+    const error = new Error(message) as Error & { status?: number; data?: unknown };
+    error.status = response.status;
+    error.data = data;
+    throw error;
+  }
+  return data as T;
+}
+
+export const usd = (amount: string | number) => `$${Number(amount).toFixed(Number(amount) < 0.1 ? 3 : 2)}`;
