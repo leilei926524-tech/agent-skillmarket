@@ -29,7 +29,7 @@ const NAV_GROUPS = [
       { href: "/wallet", label: "nav.wallet", icon: "⬟" },
     ],
   },
-] satisfies { group: string; items: { href: string; label: TranslationKey; icon: string }[] }[];
+] as { group: string; items: { href: string; label: TranslationKey; icon: string }[] }[];
 
 function SidebarNav() {
   const path = usePathname();
