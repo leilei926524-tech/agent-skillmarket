@@ -39,12 +39,12 @@ export default function Activity() {
           <h1 className="display-hero text-4xl md:text-6xl">{t("console.hero1")}<br />{t("console.hero2")}</h1>
         </div>
         <div className="meta text-[10px] text-dim text-right">
-          {stats?.network === "eip155:8453" ? t("common.baseMainnet") : t("common.baseSepolia")}<br />
+          {stats ? (stats.network === "eip155:8453" ? t("common.baseMainnet") : t("common.baseSepolia")) : "—"}<br />
           {stats?.settledInvocations ?? "—"} {t("common.settled")}
         </div>
       </section>
       {error && <div className="error-box" role="alert">{t("common.requestFailed")}</div>}
-      <div className="grid grid-cols-3 gap-3 mb-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
         {counters.map((item) => <div className="panel p-5" key={item.k}><div className="mono text-3xl font-bold">{item.v}</div><div className="kicker !text-[8px] mt-2">{t(item.k)}</div></div>)}
       </div>
       <div className="panel overflow-hidden">

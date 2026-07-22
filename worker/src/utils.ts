@@ -1,11 +1,12 @@
 import type { Context } from "hono";
 import type { Env, Variables } from "./types";
+import { skillInputContract } from "./execution";
 
 export const nowIso = () => new Date().toISOString();
 
 export function jsonError(
   c: Context<{ Bindings: Env; Variables: Variables }>,
-  status: 400 | 401 | 403 | 404 | 409 | 413 | 422 | 429 | 500 | 503,
+  status: 400 | 401 | 403 | 404 | 409 | 410 | 413 | 422 | 429 | 500 | 503,
   code: string,
   message: string,
   details?: unknown,
@@ -65,9 +66,10 @@ export class BodyError extends Error {
 
 export function publicSkill(skill: import("./types").SkillRecord, origin: string) {
   const publisher = skill.publisher_name === "ExpertOS Labs" ? "GOKUI Labs" : skill.publisher_name;
-  const deliveryType = skill.delivery_type && skill.delivery_type !== "paid_api" ? "external_source" : "paid_api";
+  const deliveryType = skill.delivery_type === "paid_api" ? "paid_api" : "external_source";
   const listingKind = skill.listing_kind || (publisher === "GOKUI Labs" ? "platform" : "publisher");
   const invokeUrl = deliveryType === "paid_api" ? `${origin}/api/v1/skills/${skill.slug}/invoke` : null;
+  const input = deliveryType === "paid_api" ? skillInputContract(skill) : null;
   return {
     id: skill.id,
     slug: skill.slug,
@@ -75,6 +77,11 @@ export function publicSkill(skill: import("./types").SkillRecord, origin: string
     description: skill.description,
     category: skill.category,
     tags: parseJson<string[]>(skill.tags_json, []),
+    searchAliases: parseJson<string[]>(skill.search_aliases_json || "[]", []),
+    localizations: parseJson<Record<string, { title?: string; description?: string; category?: string; riskSummary?: string }>>(
+      skill.localizations_json || "{}",
+      {},
+    ),
     version: skill.version,
     license: skill.license,
     publisher,
@@ -82,6 +89,8 @@ export function publicSkill(skill: import("./types").SkillRecord, origin: string
     risk: { level: skill.risk_level, summary: skill.risk_summary },
     invokes: skill.invokes,
     invokeUrl,
+    inputSchema: input?.schema || null,
+    exampleInput: input?.example || null,
     delivery: {
       type: deliveryType,
       callable: deliveryType === "paid_api",

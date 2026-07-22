@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 
 export const metadata: Metadata = {
   title: "Agent Skill Details — GOKUI",
-  description: "Inspect a GOKUI skill's publisher, license, risk summary, price, invocation endpoint, and x402 payment contract.",
+  description: "Inspect a GOKUI Skill's publisher, license, risk note, pinned source or paid invocation contract, and example input.",
   alternates: { canonical: "/skill/" },
   robots: { index: false, follow: true },
 };

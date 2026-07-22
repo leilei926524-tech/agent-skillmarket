@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 
 export const metadata: Metadata = {
   title: "Browse Agent Skills — GOKUI",
-  description: "Browse reviewed, callable agent skills with visible prices, publishers, risk summaries, and settled usage.",
+  description: "Browse paid Agent APIs and reviewed links to pinned upstream Skills, with prices, sources, publishers, and risk notes shown up front.",
   alternates: { canonical: "/store/" },
   openGraph: { title: "Browse Agent Skills — GOKUI", url: "/store/" },
 };

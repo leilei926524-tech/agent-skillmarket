@@ -1,5 +1,5 @@
 Contact: https://github.com/leilei926524-tech/agent-skillmarket/security/advisories/new
 Expires: 2027-07-22T00:00:00.000Z
 Preferred-Languages: en, zh
-Canonical: https://1924902988hu-del.github.io/.well-known/security.txt
+Canonical: https://tryexpertos.com/.well-known/security.txt
 Policy: https://github.com/leilei926524-tech/agent-skillmarket/security

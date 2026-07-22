@@ -11,8 +11,8 @@
   --panel: rgba(255, 255, 255, 0.68);
   --line: rgba(14, 14, 40, 0.28);
   --violet: #1746c4;
-  --green: #077a4b;
-  --amber: #f0348b;
+  --green: #005c3a;
+  --amber: #8c174c;
   --dim: #45526e;
 }
 
@@ -55,7 +55,11 @@ body {
 :where(a, button, input, textarea, select, summary):focus-visible {
   outline: 3px solid var(--foreground);
   outline-offset: 3px;
+  scroll-margin-top: 112px;
+  scroll-margin-bottom: 48px;
 }
+
+:target { scroll-margin-top: 112px; }
 
 #main-content:focus { outline: none; }
 
@@ -450,6 +454,12 @@ body {
 .type-in { animation: typing 1.4s steps(60, end) both; }
 
 @media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
   .gel, .sparkle, .marquee-track, .live-dot, .row-in, .toast-in, .invoking, .type-in { animation: none; }
 }
 

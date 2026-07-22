@@ -4,8 +4,10 @@ import { logger } from "hono/logger";
 import type { AgentRecord, Env, SkillRecord, Variables } from "./types";
 import { BodyError, jsonError, nowIso, parseJson, publicSkill, randomToken, readJsonBody, sha256 } from "./utils";
 import { scanSkill } from "./scan";
+import { matchesSkillQuery, rankSkillsForTask } from "./search";
 import { executeSkill } from "./execution";
 import { paymentSignatureHash, x402Gate } from "./payment";
+import { invocationResultExpired, invocationResultExpiresAt, purgeExpiredInvocationResults } from "./retention";
 
 const app = new Hono<{ Bindings: Env; Variables: Variables }>();
 type AppEnv = { Bindings: Env; Variables: Variables };
@@ -46,13 +48,16 @@ app.get("/.well-known/agent-skills.json", (c) => {
     payment: {
       scheme: "exact",
       network: c.env.X402_NETWORK,
-      amountUsd: c.env.X402_PRICE_USD,
+      pricing: "per-skill",
+      defaultAmountUsd: c.env.X402_PRICE_USD,
+      priceSource: "skill.price.amount",
       headers: ["PAYMENT-REQUIRED", "PAYMENT-SIGNATURE", "PAYMENT-RESPONSE"],
     },
     catalog: {
       deliveryTypes: ["paid_api", "external_source"],
-      disclosure: "Paid APIs run behind x402. Community-curated source packages open a pinned upstream version and are not sold by GOKUI.",
+      disclosure: "Paid APIs are called and paid by agents through x402; the website does not connect a wallet. Community-curated source packages provide a guarded AI-install handoff pinned to an upstream version and are not sold by GOKUI.",
     },
+    privacy: "Plaintext paid-call input is not stored. Results are retained for up to 24 hours; request hashes and minimal payment receipts remain for security and reconciliation.",
     safety: "Automated checks reduce risk but are not an endorsement. Review third-party skills and permissions before use.",
   });
 });
@@ -61,15 +66,21 @@ async function listSkills(c: AppContext) {
   const q = (c.req.query("q") || "").trim().toLowerCase();
   const category = (c.req.query("category") || "").trim().toLowerCase();
   const maxPrice = Number(c.req.query("maxPrice") || "0");
+  const deliveryType = (c.req.query("deliveryType") || "any").trim();
+  if (!Number.isFinite(maxPrice) || maxPrice < 0) return jsonError(c, 422, "invalid_max_price", "maxPrice must be a non-negative number.");
+  if (!["any", "paid_api", "external_source"].includes(deliveryType)) {
+    return jsonError(c, 422, "invalid_delivery_type", "deliveryType must be any, paid_api, or external_source.");
+  }
   const rows = await c.env.DB.prepare(
     "SELECT * FROM skills WHERE status = 'approved' ORDER BY invokes DESC, updated_at DESC",
   ).all<SkillRecord>();
   const origin = new URL(c.req.url).origin;
   const skills = rows.results.filter((skill) => {
-    const haystack = `${skill.slug} ${skill.title} ${skill.description} ${skill.category} ${skill.tags_json}`.toLowerCase();
-    if (q && !haystack.includes(q)) return false;
+    if (!matchesSkillQuery(skill, q)) return false;
     if (category && skill.category.toLowerCase() !== category) return false;
     if (maxPrice > 0 && Number(skill.price_usd) > maxPrice) return false;
+    const skillDeliveryType = skill.delivery_type === "paid_api" ? "paid_api" : "external_source";
+    if (deliveryType !== "any" && skillDeliveryType !== deliveryType) return false;
     return true;
   });
   return c.json({ skills: skills.map((skill) => publicSkill(skill, origin)), total: skills.length });
@@ -193,7 +204,18 @@ app.get("/api/v1/submissions/:id/status", async (c) => {
   if (!row || row.review_token_hash !== await sha256(token)) {
     return jsonError(c, 404, "submission_not_found", "Submission or status token was not found.");
   }
-  return c.json({ submission: { ...row, review_token_hash: undefined, scan: parseJson(row.scan_result_json, {}) } });
+  return c.json({
+    submission: {
+      id: row.id,
+      slug: row.slug,
+      title: row.title,
+      status: row.status,
+      riskLevel: row.risk_level,
+      scan: parseJson(row.scan_result_json, {}),
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+    },
+  });
 });
 
 app.post("/api/v1/agents/access", async (c) => {
@@ -203,12 +225,15 @@ app.post("/api/v1/agents/access", async (c) => {
   const name = String(input.name || "").trim();
   const ownerEmail = String(input.ownerEmail || "").trim().toLowerCase();
   const purpose = String(input.purpose || "").trim();
-  const dailyBudget = Math.min(100, Math.max(0.01, Number(input.dailyBudgetUsd || 1)));
+  const dailyBudget = input.dailyBudgetUsd === undefined ? 1 : Number(input.dailyBudgetUsd);
   if (!/^[a-zA-Z0-9][a-zA-Z0-9_-]{2,63}$/.test(name)) {
     return jsonError(c, 422, "invalid_agent_name", "Agent name must contain 3–64 letters, numbers, hyphens, or underscores.");
   }
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(ownerEmail) || purpose.length < 20 || purpose.length > 500) {
     return jsonError(c, 422, "invalid_agent_owner", "A valid owner email and a 20–500 character purpose are required.");
+  }
+  if (!Number.isFinite(dailyBudget) || dailyBudget < 0.01 || dailyBudget > 100) {
+    return jsonError(c, 422, "invalid_daily_budget", "dailyBudgetUsd must be a number from 0.01 to 100.");
   }
   const recent = await c.env.DB.prepare(
     "SELECT COUNT(*) AS count FROM agents WHERE owner_email = ? AND created_at >= datetime('now', '-1 day')",
@@ -245,38 +270,43 @@ const requireAgent: MiddlewareHandler<AppEnv> = async (c, next) => {
 
 app.get("/api/v1/agent/skills", requireAgent, listSkills);
 
+app.post("/api/v1/agents/revoke", requireAgent, async (c) => {
+  const agent = c.get("agent");
+  const revokedAt = nowIso();
+  const result = await c.env.DB.prepare(
+    "UPDATE agents SET status = 'revoked', revoked_at = ? WHERE id = ? AND status = 'active'",
+  ).bind(revokedAt, agent.id).run();
+  if (!result.meta.changes) return jsonError(c, 409, "agent_not_active", "This agent key is not active.");
+  return c.json({ agent: { id: agent.id, name: agent.name, status: "revoked", revokedAt } });
+});
+
 app.post("/api/v1/agent/recommend", requireAgent, async (c) => {
   const body = await readJsonBody(c, 20_000);
   const input = body && typeof body === "object" ? body as Record<string, unknown> : {};
   const task = String(input.task || "").trim();
   const maxPrice = Number(input.maxPriceUsd || 0);
+  const locale = input.locale === "zh-CN" ? "zh-CN" : "en";
   if (task.length < 10 || task.length > 2000) return jsonError(c, 422, "invalid_task", "task must contain 10–2000 characters.");
-  const tokens = [...new Set(task.toLowerCase().match(/[a-z0-9]{3,}|[\u4e00-\u9fff]{2,}/g) || [])];
+  if (!Number.isFinite(maxPrice) || maxPrice < 0) return jsonError(c, 422, "invalid_max_price", "maxPriceUsd must be a non-negative number.");
   const rows = await c.env.DB.prepare(
     "SELECT * FROM skills WHERE status = 'approved' ORDER BY invokes DESC, updated_at DESC",
   ).all<SkillRecord>();
-  const ranked = rows.results
-    .filter((skill) => !maxPrice || Number(skill.price_usd) <= maxPrice)
-    .map((skill) => {
-      const haystack = `${skill.slug} ${skill.title} ${skill.description} ${skill.category} ${skill.tags_json}`.toLowerCase();
-      const matched = tokens.filter((token) => haystack.includes(token));
-      const score = matched.length * 20 + (skill.risk_level === "normal" ? 10 : 0) + Math.min(10, skill.invokes);
-      return { skill, matched, score };
-    })
-    .sort((a, b) => b.score - a.score)
-    .slice(0, 3);
+  const ranked = rankSkillsForTask(rows.results, task, maxPrice);
   const origin = new URL(c.req.url).origin;
   return c.json({
     task,
     recommendations: ranked.map(({ skill, matched, score }, index) => ({
       rank: index + 1,
       score,
-      reason: matched.length
-        ? `Matched task terms: ${matched.slice(0, 5).join(", ")}.`
-        : "Fallback candidate ranked by approved status, risk result, and current catalog coverage.",
+      matchedTerms: matched,
+      reason: locale === "zh-CN"
+        ? `匹配任务关键词：${matched.slice(0, 5).join("、")}。`
+        : `Matched task terms: ${matched.slice(0, 5).join(", ")}.`,
       skill: publicSkill(skill, origin),
     })),
-    rankingDisclosure: "Ranking uses task-term overlap, approved status, risk result, price filter, and settled invocation count.",
+    rankingDisclosure: locale === "zh-CN"
+      ? "只返回有真实关键词或别名匹配的已上架 Skill；价格、风险和已结算调用仅用于排序。"
+      : "Only approved skills with a real task-term or alias match are returned; price, risk, and settled usage only break ties.",
   });
 });
 
@@ -292,20 +322,55 @@ app.post(
       "SELECT * FROM skills WHERE slug = ? AND status = 'approved'",
     ).bind(c.req.param("slug")).first<SkillRecord>();
     if (!skill) return jsonError(c, 404, "skill_not_found", "No approved skill uses that slug.");
-    if (skill.delivery_type && skill.delivery_type !== "paid_api") {
+    if (skill.delivery_type !== "paid_api") {
       return jsonError(c, 409, "source_only_skill", "This community-curated listing is installed from its pinned upstream source; it is not a paid GOKUI endpoint.", {
         sourceUrl: skill.source_url,
         sourceCommit: skill.source_commit,
       });
     }
+    const skillPriceUsd = Number(skill.price_usd);
+    if (!Number.isFinite(skillPriceUsd) || skillPriceUsd <= 0) {
+      return jsonError(c, 503, "skill_price_invalid", "This paid skill does not have a valid positive price.");
+    }
     c.set("skill", skill);
+    const body = await readJsonBody(c, 25_000);
+    if (!body || typeof body !== "object" || Array.isArray(body)) {
+      return jsonError(c, 422, "invalid_skill_input", "Skill input must be a JSON object.");
+    }
+    const input = body as Record<string, unknown>;
+    const validation = executeSkill(skill, input);
+    if (!validation.ok) return jsonError(c, 422, "skill_input_rejected", String(validation.error || "Skill rejected the input."));
+    const requestHash = await sha256(JSON.stringify(input));
+    c.set("skillInput", input);
     const existing = await c.env.DB.prepare(
-      "SELECT skill_id, request_hash, output_json, status, tx_hash, amount_usd, network FROM invocations WHERE agent_id = ? AND idempotency_key = ?",
+      "SELECT id, skill_id, request_hash, output_json, status, tx_hash, amount_usd, network, created_at, result_expires_at, purged_at FROM invocations WHERE agent_id = ? AND idempotency_key = ?",
     ).bind(c.get("agent").id, key).first<Record<string, string>>();
     if (existing && existing.skill_id !== skill.id) {
       return jsonError(c, 409, "idempotency_key_reused", "This idempotency key already belongs to a different skill invocation.");
     }
+    if (existing && existing.request_hash !== requestHash) {
+      return jsonError(c, 409, "idempotency_payload_changed", "This idempotency key was already used with different input.");
+    }
+    if (existing?.status === "executed" && Date.now() - Date.parse(existing.created_at) > 10 * 60 * 1000) {
+      await c.env.DB.prepare(
+        "UPDATE invocations SET status = 'payment_unknown' WHERE id = ? AND status = 'executed'",
+      ).bind(existing.id).run();
+      return jsonError(c, 409, "invocation_payment_unknown", "This invocation stopped before its payment status was recorded. Use a new idempotency key only after checking the wallet and payment receipt.", {
+        invocationId: existing.id,
+      });
+    }
     if (existing?.status === "settled") {
+      if (existing.purged_at || invocationResultExpired(existing.result_expires_at)) {
+        if (!existing.purged_at) {
+          await c.env.DB.prepare(
+            "UPDATE invocations SET output_json = 'null', purged_at = ? WHERE id = ? AND purged_at IS NULL",
+          ).bind(nowIso(), existing.id).run();
+        }
+        return jsonError(c, 410, "invocation_result_expired", "The paid result expired after 24 hours and was deleted. Payment will not be repeated for this idempotency key.", {
+          invocationId: existing.id,
+          payment: { status: existing.status, txHash: existing.tx_hash, amountUsd: existing.amount_usd, network: existing.network },
+        });
+      }
       c.header("X-Idempotent-Replay", "true");
       return c.json({
         replay: true,
@@ -315,13 +380,17 @@ app.post(
     }
     if (existing) return jsonError(c, 409, "invocation_in_progress", "This idempotency key already belongs to an unfinished invocation.");
     const spent = await c.env.DB.prepare(
-      "SELECT COALESCE(SUM(CAST(amount_usd AS REAL)), 0) AS total FROM invocations WHERE agent_id = ? AND status = 'settled' AND created_at >= datetime('now', 'start of day')",
+      `SELECT COALESCE(SUM(CAST(amount_usd AS REAL)), 0) AS total
+         FROM invocations
+        WHERE agent_id = ?
+          AND ((status = 'settled' AND created_at >= datetime('now', 'start of day'))
+            OR (status = 'executed' AND created_at >= datetime('now', '-10 minutes')))`,
     ).bind(c.get("agent").id).first<{ total: number }>();
-    if (Number(spent?.total || 0) + Number(c.env.X402_PRICE_USD) > Number(c.get("agent").daily_budget_usd)) {
+    if (Number(spent?.total || 0) + skillPriceUsd > Number(c.get("agent").daily_budget_usd)) {
       return jsonError(c, 403, "daily_budget_exceeded", "This invocation would exceed the agent's server-side daily budget.", {
         dailyBudgetUsd: c.get("agent").daily_budget_usd,
         spentTodayUsd: Number(spent?.total || 0).toFixed(2),
-        requestedUsd: c.env.X402_PRICE_USD,
+        requestedUsd: skill.price_usd,
       });
     }
     await next();
@@ -329,22 +398,28 @@ app.post(
   x402Gate,
   async (c) => {
     const skill = c.get("skill");
-    const body = await readJsonBody(c, 25_000);
-    if (!body || typeof body !== "object" || Array.isArray(body)) {
-      return jsonError(c, 422, "invalid_skill_input", "Skill input must be a JSON object.");
-    }
-    const input = body as Record<string, unknown>;
+    const input = c.get("skillInput");
     const result = executeSkill(skill, input);
-    if (!result.ok) return jsonError(c, 422, "skill_input_rejected", String(result.error || "Skill rejected the input."));
     const requestHash = await sha256(JSON.stringify(input));
     const invocationId = crypto.randomUUID();
+    const createdAt = nowIso();
+    const resultExpiresAt = invocationResultExpiresAt(createdAt);
     try {
-      await c.env.DB.batch([
+      const [reservation] = await c.env.DB.batch([
         c.env.DB.prepare(
           `INSERT INTO invocations (
             id, skill_id, agent_id, idempotency_key, request_hash, payment_signature_hash,
-            tx_hash, network, amount_usd, status, input_json, output_json, created_at
-          ) VALUES (?, ?, ?, ?, ?, ?, NULL, ?, ?, 'executed', ?, ?, ?)`,
+            tx_hash, network, amount_usd, status, input_json, output_json, created_at, result_expires_at
+          )
+          SELECT ?, ?, ?, ?, ?, ?, NULL, ?, ?, 'executed', 'null', ?, ?, ?
+           WHERE (
+             SELECT COALESCE(SUM(CAST(ROUND(CAST(amount_usd AS REAL) * 1000000) AS INTEGER)), 0)
+               FROM invocations
+              WHERE agent_id = ?
+                AND ((status = 'settled' AND created_at >= datetime('now', 'start of day'))
+                  OR (status = 'executed' AND created_at >= datetime('now', '-10 minutes')))
+           ) + CAST(ROUND(CAST(? AS REAL) * 1000000) AS INTEGER)
+             <= CAST(ROUND(CAST(? AS REAL) * 1000000) AS INTEGER)`,
         ).bind(
           invocationId,
           skill.id,
@@ -353,13 +428,24 @@ app.post(
           requestHash,
           await paymentSignatureHash(c),
           c.env.X402_NETWORK,
-          c.env.X402_PRICE_USD,
-          JSON.stringify(input),
+          skill.price_usd,
           JSON.stringify(result),
-          nowIso(),
+          createdAt,
+          resultExpiresAt,
+          c.get("agent").id,
+          skill.price_usd,
+          c.get("agent").daily_budget_usd,
         ),
-        c.env.DB.prepare("UPDATE skills SET invokes = invokes + 1, updated_at = ? WHERE id = ?").bind(nowIso(), skill.id),
+        c.env.DB.prepare(
+          "UPDATE skills SET invokes = invokes + 1, updated_at = ? WHERE id = ? AND EXISTS (SELECT 1 FROM invocations WHERE id = ?)",
+        ).bind(nowIso(), skill.id, invocationId),
       ]);
+      if (!reservation.meta.changes) {
+        return jsonError(c, 403, "daily_budget_exceeded", "This invocation would exceed the agent's server-side daily budget.", {
+          dailyBudgetUsd: c.get("agent").daily_budget_usd,
+          requestedUsd: skill.price_usd,
+        });
+      }
     } catch (error) {
       if (String(error).includes("UNIQUE")) return jsonError(c, 409, "duplicate_invocation", "Another request used this idempotency key.");
       throw error;
@@ -369,7 +455,7 @@ app.post(
       invocationId,
       skill: { slug: skill.slug, version: skill.version },
       result,
-      payment: { status: "settlement_pending", amountUsd: c.env.X402_PRICE_USD, network: c.env.X402_NETWORK },
+      payment: { status: "settlement_pending", amountUsd: skill.price_usd, network: c.env.X402_NETWORK },
     });
   },
 );
@@ -444,4 +530,9 @@ app.notFound((c) => {
   return c.env.ASSETS.fetch(c.req.raw);
 });
 
-export default app;
+export default {
+  fetch: app.fetch,
+  scheduled(_controller: ScheduledController, env: Env, ctx: ExecutionContext) {
+    ctx.waitUntil(purgeExpiredInvocationResults(env));
+  },
+};

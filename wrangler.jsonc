@@ -6,7 +6,18 @@
   "compatibility_flags": ["nodejs_compat"],
   "workers_dev": true,
   "preview_urls": false,
+  "triggers": {
+    "crons": ["0 * * * *"]
+  },
   "routes": [
+    {
+      "pattern": "tryexpertos.com",
+      "custom_domain": true
+    },
+    {
+      "pattern": "www.tryexpertos.com",
+      "custom_domain": true
+    },
     {
       "pattern": "gokui.mesalaunch.com",
       "custom_domain": true

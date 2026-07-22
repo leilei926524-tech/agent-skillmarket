@@ -101,10 +101,14 @@ export function scanSkill(markdown: string): ScanResult {
   const warningPatterns: [RegExp, string][] = [
     [/\bsudo\b|\bchmod\s+777\b/i, "Requests elevated or broad filesystem permissions."],
     [/\b(?:private key|seed phrase|wallet secret)\b/i, "Mentions high-risk wallet secrets; manual review required."],
-    [/\b(?:delete|cancel|transfer|purchase|trade|broadcast)\b/i, "May perform an external write or financial action; add explicit confirmation rules."],
     [/```(?:bash|sh|shell)/i, "Contains shell commands; reviewers must verify every command against a real binary."],
   ];
   for (const [pattern, warning] of warningPatterns) if (pattern.test(markdown)) warnings.push(warning);
+  const consequentialAction = /\b(?:delete|cancel|transfer|purchase|trade|broadcast|publish|send|pay)\b/i.test(markdown);
+  const confirmationRule = /\b(?:explicit(?:ly)?\s+confirm(?:ation)?|user\s+confirm(?:ation)?|human\s+(?:confirm(?:ation)?|approval|review)|require(?:s|d)?\s+(?:confirmation|approval)|without\s+(?:confirmation|approval)|user\s+consent)\b|(?:人工|用户|明确)(?:确认|批准)/i.test(markdown);
+  if (consequentialAction && !confirmationRule) {
+    warnings.push("May perform an external write or financial action; add explicit confirmation rules.");
+  }
   checks.push({
     id: "security",
     status: warnings.length ? "warning" : "passed",

@@ -27,7 +27,7 @@ const NAV = [
   { href: "/store", label: "nav.store" },
   { href: "/submit", label: "nav.submit" },
   { href: "/agents", label: "nav.agentGate", mobileLabel: "nav.agents" },
-  { href: "/console", label: "nav.activity", mobileHidden: true },
+  { href: "/console", label: "nav.activity" },
 ] satisfies { href: string; label: TranslationKey; mobileLabel?: TranslationKey; mobileHidden?: boolean }[];
 
 export function Nav() {
@@ -35,11 +35,11 @@ export function Nav() {
   const { t } = useI18n();
   return (
     <header className="sticky top-0 z-40 bg-background/90 border-b border-line backdrop-blur-sm">
-      <div className="mx-auto max-w-[1360px] px-4 md:px-6 min-h-14 flex items-center gap-3 md:gap-4">
+      <div className="mx-auto max-w-[1360px] px-4 md:px-6 min-h-14 flex flex-wrap md:flex-nowrap items-center gap-x-3 md:gap-x-4 gap-y-0">
         <Link href="/" className="font-extrabold tracking-tight text-[17px] shrink-0">
           GOKUI<span className="text-violet">.</span>
         </Link>
-        <nav className="nav-scroll flex items-center gap-3 md:gap-5 meta text-[9.5px] md:text-[11.5px] overflow-x-auto py-4" aria-label={t("nav.primary")}>
+        <nav className="nav-scroll order-3 md:order-none basis-full md:basis-auto w-full md:w-auto min-w-0 flex-none md:flex-1 flex items-center justify-between md:justify-start gap-3 md:gap-5 meta text-[10px] md:text-[11.5px] overflow-x-auto py-2 md:py-4" aria-label={t("nav.primary")}>
           {NAV.map((item) => {
             const active = item.href === "/" ? path === "/" : path.startsWith(item.href);
             return (
@@ -47,7 +47,7 @@ export function Nav() {
                 key={item.href}
                 href={item.href}
                 aria-current={active ? "page" : undefined}
-                className={`${item.mobileHidden ? "hidden sm:inline" : ""} nav-link ${active ? "text-violet font-bold" : "text-foreground/80 hover:text-violet"}`}
+                className={`${item.mobileHidden ? "hidden sm:inline" : ""} nav-link shrink-0 whitespace-nowrap ${active ? "text-violet font-bold" : "text-foreground/80 hover:text-violet"}`}
               >
                 {item.mobileLabel ? <><span className="sm:hidden">{t(item.mobileLabel)}</span><span className="hidden sm:inline">{t(item.label)}</span></> : t(item.label)}
               </Link>

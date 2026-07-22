@@ -1,12 +1,12 @@
 # GOKUI SEO and accessibility review
 
 Updated: 2026-07-22
-Public frontend: https://1924902988hu-del.github.io/
-API boundary: https://gokui.mesalaunch.com/
+Public frontend and API: https://tryexpertos.com/
+Compatibility API boundary: https://gokui.mesalaunch.com/
 
 ## SEO decisions
 
-- The GitHub Pages URL is the current public canonical frontend. The Cloudflare Worker remains the API, manifest, D1, and x402 boundary.
+- `tryexpertos.com` is the canonical frontend and API origin. The Cloudflare Worker remains the static asset, manifest, D1, and x402 boundary; the old Pages and Worker URLs are compatibility entry points.
 - Every indexable route now has a unique title, description, and self-referencing canonical URL.
 - `/skill/?slug=...` remains a client-rendered query route. It is `noindex, follow` until the build creates a stable static URL and server-rendered metadata for each approved Skill.
 - `/console/` is public for receipt verification but `noindex, follow`; it is not a search landing page and is omitted from the sitemap.
@@ -37,7 +37,7 @@ API boundary: https://gokui.mesalaunch.com/
 
 ## QA evidence
 
-Production-style static build used `NEXT_PUBLIC_API_BASE_URL=https://gokui.mesalaunch.com`.
+Production static builds use the same-origin API at `https://tryexpertos.com`; the old `gokui.mesalaunch.com` endpoint remains available for compatibility checks.
 
 - `npm run build`: passed; 12 static pages generated.
 - Desktop 1440×900: homepage, store, privacy, terms, and payment activity inspected.

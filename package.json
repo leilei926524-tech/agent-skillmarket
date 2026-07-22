@@ -7,6 +7,7 @@
     "dev": "wrangler dev --local",
     "build:web": "bun run --cwd web build",
     "build": "bun run build:web && wrangler deploy --dry-run --outdir dist-worker",
+    "test": "bun test worker/src/*.test.ts",
     "typecheck": "tsc -p worker/tsconfig.json --noEmit",
     "i18n:check": "bun run scripts/check-i18n.ts",
     "copy:check": "bun run scripts/check-public-copy.ts",

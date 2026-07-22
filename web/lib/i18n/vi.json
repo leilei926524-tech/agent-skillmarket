@@ -169,7 +169,7 @@
   "submit.ai.copy": "Sao chép AI lời nhắc",
   "submit.ai.copied": "Đã sao chép lời nhắc",
   "submit.ai.open": "Mở ChatGPT ↗",
-  "submit.ai.supported": "Hoạt động với ChatGPT, ::41004:::, Gemini, Codex, và các trợ lý có khả năng AI khác.",
+  "submit.ai.supported": "Hoạt động với ChatGPT, Claude, Gemini, Codex và các trợ lý AI khác.",
   "submit.ai.preview": "Xem trước lời nhắc",
   "submit.uploadStep": "02 · Tải kết quả lên",
   "submit.uploadTitle": "Tải lên SKILL.md của bạn AI đã tạo",

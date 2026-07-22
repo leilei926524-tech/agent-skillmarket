@@ -1,169 +1,197 @@
-# GOKUI curated catalog differential security review
+# GOKUI differential review — 2026-07-22
 
-Review date: 2026-07-22
-Baseline: `bf5e212`
-Review target: `88d646d`
-Production Worker version: `d765b521-2dce-4d56-877f-166ae36ac6f8`
-GitHub Pages release: `3ff0086`
+## Decision
 
-## Executive summary
+**CONDITIONAL — do not deploy this worktree yet.**
 
-| Severity | Open | Resolved during review |
+The five product branches are now implemented and internally consistent. Type, build, fresh-migration, copy, API, retention, and browser checks pass. Deployment is still conditional because the public support route is not proven and the remote migration/Worker/x402 path has not been exercised with this diff.
+
+| Severity | Open | Resolved in worktree |
 |---|---:|---:|
 | Critical | 0 | 0 |
-| High | 0 | 0 |
-| Medium | 0 | 1 |
-| Low | 0 | 0 |
+| High | 0 | 2 |
+| Medium | 3 | 2 |
+| Low | 2 | 1 |
 
-**Overall implementation risk:** Medium because this change modifies D1 schema, public catalog contracts, and the pre-x402 invocation path.
-**Recommendation:** Approve. The remote migration, production smoke test, public catalog checks, and desktop/mobile online QA passed.
+**Overall residual risk: MEDIUM.** The review found no new critical or high-severity vulnerability in the selected architecture. The public support contact still needs a real team-controlled address before the privacy and terms contact buttons can be considered usable.
 
-Key metrics:
+## Scope and baseline
 
-- 14 changed implementation/data/documentation files in `bf5e212..88d646d`.
-- 738 additions and 97 deletions, including the curated-data migration and review reports.
-- 2 high-risk files reviewed deeply: `worker/src/index.ts` and `worker/migrations/0003_curated_catalog.sql`.
-- 3 direct `publicSkill()` consumers checked.
-- 12/12 pinned upstream URLs returned HTTP 200.
-- 1 pre-existing idempotency ordering issue found and fixed during review.
+- Repository: `leilei926524-tech/agent-skillmarket`
+- Branch: `agent/yc-marketplace-mvp`
+- Baseline reviewed: `e8595932c0e79940474294e3ac6b9a2fa9fc63b7`
+- Change surface: 50 modified or new files covering Worker API, D1 migrations, x402 middleware configuration, search and recommendation, Agent key lifecycle, submission recovery, invocation retention, free Skill installation handoff, failure UX, public copy, metadata, responsive navigation, accessibility, and smoke coverage.
+- No dependency versions changed in this diff.
+- No commit, push, remote migration, Worker deployment, Pages publication, payment, or merge was performed during this review.
 
-## What changed
+## Review methodology and confidence
 
-| File | Risk | Behavioral effect | Blast radius |
-|---|---|---|---|
-| `worker/migrations/0003_curated_catalog.sql` | High | Adds delivery/provenance fields and 12 curated rows | All catalog reads after migration |
-| `worker/src/index.ts` | High | Rejects source-only invokes before payment and binds idempotency keys to skill IDs | One public invoke endpoint |
-| `worker/src/utils.ts` | Medium | Exposes delivery and provenance; fails closed for non-`paid_api` values | 3 API response paths |
-| `worker/src/types.ts` | Medium | Adds the D1 record contract | Worker compile-time consumers |
-| `web/lib/live.ts` | Medium | Adds public delivery/provenance types | Store, detail, recommendation UI |
-| `web/app/store/page.tsx` | Medium | Separates paid APIs from curated source listings | Catalog page |
-| `web/app/skill/page.tsx` | Medium | Replaces payment controls with source provenance for curated listings | Skill detail page |
-| `web/app/agents/page.tsx` | Low | Labels source recommendations honestly | Recommendation cards |
-| `scripts/smoke.ts` | Medium | Blocks deployment if provenance or payment isolation fails | Production smoke workflow |
-| `README.md`, curation report, EN/ZH copy | Low | Documents the new trust boundary | Public and maintainer documentation |
+This was a focused differential review against the baseline commit rather than an audit of every historical line in the repository. The repository contains roughly 1,880 TypeScript/TSX source files; the full 50-file worktree diff was classified by risk, then the Worker routes, x402/idempotency path, D1 migrations, retention job, submission-token flow, scanner rules, and their callers were reviewed line by line. Public copy and low-risk locale edits received broad consistency and browser checks rather than independent semantic review in every language.
 
-## Resolved finding
+The review used the baseline diff, relevant git history and string history, endpoint/call-site tracing, fresh-database migrations, adversarial API cases, automated regressions, and real Chromium smoke tests. No dependency version changed, no previously documented security fix was removed, and no suspicious broad deletion was found. Confidence is high for the analyzed local recovery, retention, validation, and key-revocation paths; overall confidence remains medium until the production x402 path and concurrent paid calls are reconciled against D1 and Base.
 
-### Medium: an old idempotency replay could run before the new source-only boundary
+## Security model and blast radius
 
-**File:** `worker/src/index.ts` invoke middleware
-**Historical context:** the original ordering was introduced in `c7127ea`. It queried a prior invocation by `(agent_id, idempotency_key)` and returned a settled replay before loading the requested skill.
+The highest-risk path is:
 
-**Attacker model:** an authenticated agent that already owns a settled invocation and its idempotency key.
+`Agent key → task recommendation → paid Skill input validation → server budget check → x402 verification → atomic D1 reservation/result write → settlement → receipt status update`
 
-**Attack sequence before the fix:**
+The most sensitive stored data is:
 
-1. The agent makes and settles a paid invocation for Skill A.
-2. The same agent calls a curated source-only Skill B with Skill A's idempotency key.
-3. The old middleware returns Skill A's cached result before it loads Skill B.
-4. The request bypasses the new `source_only_skill` response.
+- publisher and Agent-owner email addresses;
+- API-key and submission-token hashes;
+- paid invocation request hashes, short-lived outputs, and payment receipts (new calls do not write plaintext input);
+- payment signature hashes, transaction hashes, amounts, and network identifiers.
 
-The result belonged to the same agent, so this was not a cross-tenant disclosure or a payment bypass for new execution. It did violate endpoint identity and the new guarantee that curated slugs never enter invocation handling.
+The public frontend is static and calls the Worker API. GitHub Pages serves the public UI; the Cloudflare Worker owns dynamic API, D1, and x402 responsibilities.
 
-**Fix applied:** the middleware now loads the requested skill first, rejects every non-`paid_api` delivery before x402, selects `skill_id` with any prior idempotent record, and returns `409 idempotency_key_reused` when the key belongs to another skill.
+## Findings
 
-**Status:** resolved in the reviewed diff.
+### DR-001 — High — invocation requests and results had no deletion schedule
 
-## Adversarial checks
+**Status: resolved in this worktree.**
 
-### Curated row submitted as a paid endpoint
+The selected design stores the request hash but writes JSON `null` to the legacy non-null `input_json` column (`worker/src/index.ts:410-434`). Results receive a 24-hour expiry. A replay at or after expiry clears the result and returns `410 invocation_result_expired` with receipt metadata rather than charging again (`worker/src/index.ts:362-379`). An hourly Cron invokes D1 cleanup (`wrangler.jsonc:9-11`, `worker/src/index.ts:533-537`, `worker/src/retention.ts:15-32`).
 
-- **Entry point:** `POST /api/v1/skills/:slug/invoke`
-- **Control:** any present delivery value other than `paid_api` returns `409 source_only_skill` before budget calculation or x402 middleware.
-- **Result:** blocked locally with a valid agent key.
+Migration `0006_invocation_retention.sql:1-17` clears historical plaintext inputs, backfills expiries, removes already-expired outputs, and adds an expiry index. The cleanup also clears any legacy plaintext row and backfills a missing expiry, reducing migration/deploy-gap risk. The privacy notice states the precise boundary: replay stops at 24 hours; stored output can remain until the next hourly cleanup.
 
-### Malformed delivery value
+Adversarial scenario checked: an authenticated caller replays a settled idempotency key after expiry. The handler rejects it with 410, clears output, returns only receipt evidence, and does not enter x402, preventing a duplicate payment. This path was verified against local D1.
 
-- **Entry point:** a bad D1 value such as `external-source`.
-- **Control:** both the public serializer and invoke middleware fail closed; the serializer presents it as external source and invoke rejects it.
-- **Result:** no implicit fallback to paid execution.
+### DR-002 — High product reliability — submission recovery existed only inside one browser session
 
-### Third-party author represented as a partner
+**Status: resolved in this worktree.**
 
-- **Entry point:** public store/detail API and UI.
-- **Control:** `listingKind = curated`, `curatedBy = GOKUI`, `publisherVerified = false`, and explicit copy says the listing is not an author submission or partnership.
-- **Result:** original publisher is attribution, not a claim of marketplace participation.
+The no-login design now builds a recovery URL in the URL fragment, copies it on demand, and restores status after a new page load (`web/app/submit/page.tsx:215-235`, `web/app/submit/page.tsx:279-290`). URL fragments are not sent in HTTP requests. The raw token is sent only in `X-Submission-Token`; D1 retains its SHA-256 hash. The status endpoint returns an explicit allowlist rather than spreading the database row (`worker/src/index.ts:198-218`).
 
-### Source URL script injection
+Adversarial scenario checked: an unauthenticated attacker guesses a submission id or supplies a wrong token. The endpoint returns the same 404 boundary and does not reveal existence or publisher data. Anyone who obtains the complete recovery link can read that submission's status; the UI therefore labels it a private bearer link and warns against sharing it. This is the intended no-account tradeoff.
 
-- **Entry point:** curated detail source link.
-- **Control:** the reviewed migration contains only explicit `https://github.com/` URLs, links use `target="_blank"` with `rel="noopener noreferrer"`, and public submissions cannot set provenance fields.
-- **Residual risk:** a future admin/data migration could insert a bad scheme. Add a database constraint or serializer URL validation before opening curated writes to admins.
+The browser flow was verified by creating a submission, refreshing the fragment URL, recovering status, copying the private link, and exercising an invalid-link failure at 390px.
 
-### Unreviewed third-party execution
+### DR-003 — Medium — email-only creation limits are easy to evade
 
-- **Entry point:** GOKUI paid invocation and fallback instruction runner.
-- **Control:** curated records are source-only, have `invokeUrl = null`, and are rejected before x402. Full upstream packages are not copied into `skill_markdown` or executed by GOKUI.
-- **Result:** the new catalog expansion does not broaden the paid runtime's third-party execution surface.
+**Status: accepted only for a tightly monitored beta.**
 
-## Test coverage
+Submission and Agent-key creation limits count unverified email strings. An attacker can rotate addresses to spam D1, create many keys, or increase manual-review load.
 
-| Invariant | Evidence | Result |
-|---|---|---|
-| 3 paid + 12 curated rows | Local D1 query through `/api/v1/skills` | Pass |
-| Curated provenance complete | API assertion: GitHub URL + 40-char commit + source path | Pass |
-| Curated invoke cannot reach payment | Authenticated local request returns `409 source_only_skill` | Pass |
-| Existing paid path remains distinct | Production smoke returned an x402 v2 challenge on Base mainnet to the configured payee | Pass |
-| Public types compile | `bun run typecheck` | Pass |
-| Static site builds | `bun run build` including Wrangler dry run | Pass |
-| Public copy scan | `bun run copy:check` | Pass |
-| Remote migration | D1 reports 15 approved rows: 3 paid APIs + 12 curated source listings | Pass |
-| Production API | `https://gokui.mesalaunch.com/` and `/api/health` returned 200 twice; production smoke passed 8 checks | Pass |
-| Desktop public UI | GitHub Pages at 1440 px: 15 cards, one curated section, no horizontal overflow | Pass |
-| Mobile public UI | GitHub Pages at 390 px: 15 cards and `clientWidth = scrollWidth = 390` | Pass |
-| Empty search and recovery | Public 390 px Playwright flow shows the empty state and restores all 15 cards after clearing | Pass |
-| Curated high-risk detail | Public NVIDIA detail has no API-key input, one pinned source link, and the high-risk label | Pass |
-| Browser runtime | Public page fetched `https://gokui.mesalaunch.com/api/v1/skills` with HTTP 200; zero console errors/warnings | Pass |
+Before open public promotion, add at least one of:
 
-The repository-wide i18n parity check still fails because 58 non-English/non-Chinese dictionaries were already missing legal and accessibility keys at baseline `bf5e212`. All 60 JSON dictionaries parse, this diff adds no translation key, and the user explicitly deferred the 60-language copy pass. This is a pre-existing release-quality limitation, not a regression from the curated catalog.
+- Cloudflare rate limiting keyed by IP and route;
+- Turnstile on human web forms while preserving the Agent API boundary;
+- email verification for account-owned resources;
+- operational alerting and a safe cleanup path.
 
-## Blast radius
+### DR-004 — Medium — interrupted x402 state could reserve budget forever
 
-- `publicSkill()` has three callers: public list, public detail, and agent recommendation.
-- The invoke middleware is the sole paid execution entry point; its source-only check runs before the x402 middleware.
-- The D1 migration changes every `SELECT * FROM skills` record but uses defaults that preserve existing GOKUI rows as paid APIs.
-- Store/detail/agent UI consumers were updated together with the public API type, so there is no known stale internal caller.
+**Status: fixed in this worktree.**
 
-## Historical context
+The new atomic reservation counts `executed` rows to close the concurrent-budget race. A Worker interruption between the D1 insert and settlement-status update could otherwise leave the idempotency key permanently in progress and reserve budget indefinitely.
 
-- No authorization, payment, budget, or input-validation check was removed.
-- The original three runner implementations and x402 middleware were not changed.
-- The existing idempotency behavior came from the first marketplace implementation (`c7127ea`) and was tightened rather than relaxed.
-- No security-fix or CVE-related code was reintroduced.
+The fix:
 
-## Recommendations
+- counts only `executed` rows from the last ten minutes;
+- changes an older repeated invocation to `payment_unknown`;
+- requires the caller to check wallet and receipt evidence before choosing a new idempotency key;
+- adds an Agent/status/time D1 index for the budget query.
 
-### Blocking before production
+This favors duplicate-payment prevention over automatic retry.
 
-- [x] Apply `0003_curated_catalog.sql` to remote D1 before deploying code that reads the new fields.
-- [x] Run the updated production smoke test and confirm the existing x402 endpoint still returns a valid v2 challenge.
-- [x] Verify the public catalog reports 15 total, 3 paid, 12 curated, and zero missing source URLs.
-- [x] Check `/store` and one curated `/skill` page at desktop and 390 px on the public URL.
+### DR-005 — Medium — real concurrent paid-call behavior is not covered by an automated integration test
 
-### Follow-up
+**Status: residual validation gap.**
 
-- [ ] Add URL-scheme validation if provenance becomes writable through the admin API.
-- [ ] Add an upstream-update job that opens a review request rather than silently moving pinned commits.
-- [ ] Resolve the pre-existing 58-locale parity backlog in a separate pass.
+The reservation uses one conditional `INSERT ... SELECT` inside `D1Database.batch()`, followed by an invoke-counter update that depends on that inserted id. The SQL avoids float comparison by converting amounts to integer micro-units. D1 processes database queries serially, and a batch is transactional, so the storage design closes the observed race.
 
-## Methodology and limits
+However, local development lacks production facilitator credentials and cannot execute two real paid requests. Before a larger release, run a controlled low-value concurrency test against an isolated Agent budget and reconcile:
 
-**Strategy:** deep review for a small TypeScript/SQL change with high-risk payment and state boundaries.
+- buyer responses;
+- D1 invocation rows and statuses;
+- Base transaction hashes;
+- receiving-wallet balance.
 
-Techniques used:
+### DR-006 — Medium product trust — privacy and terms contact is not yet a proven public support path
 
-- Baseline history and blame on invocation middleware.
-- Full diff review and removed-validation scan.
-- Call-site and blast-radius search.
-- Adversarial modeling for payment isolation, provenance, URL handling, and idempotency.
-- Static package scan of all accepted upstream directories for executable files, destructive commands, credential handling, external fetches, and instruction-override indicators.
-- Local API, browser, desktop/mobile, and failure-path QA.
+**Status: blocked on user-provided fact.**
 
-Limits:
+The UI currently links to GitHub Security Advisories. A new user may not be able to use that route unless repository private vulnerability reporting and permissions are configured. Replace it with a real team-controlled support/security email or prove that the GitHub private-reporting route works from a signed-out or ordinary external account.
 
-- This was not a formal malware analysis of every upstream reference file.
-- A risk label applies only to the pinned reviewed commit.
-- GitHub publisher identity and license files were inspected, but GOKUI has no partnership or identity-verification relationship with these publishers.
-- Production verification covers the published GOKUI build as of Worker version `d765b521-2dce-4d56-877f-166ae36ac6f8` and Pages commit `3ff0086`; it is not a standing guarantee for future upstream changes.
+### DR-007 — Low — 58 locale files do not yet contain newer legal and failure keys
 
-**Confidence:** high for GOKUI payment/provenance isolation; medium for the behavior of third-party packages after users install them outside GOKUI.
+**Status: known deferred work.**
+
+English and Simplified Chinese contain the current copy. The other 58 supported locale files fall back to English for newer footer, request-failure, privacy, and terms keys. `bun run i18n:check` correctly fails and should remain a visible release-quality debt; it was not suppressed. This review intentionally did not mass-generate those translations. A separate full-tree scan found and removed machine placeholder tokens from 28 existing submit-flow strings across Amharic, Danish, French, Icelandic, Korean, Norwegian, Polish, Somali, Swahili, Swedish, Tamil, and Vietnamese.
+
+### DR-008 — Low — deployment order can briefly expose legacy retention behavior
+
+**Status: operational release constraint; mitigated in code.**
+
+The new Worker requires columns added by migration `0006`, so the migration must precede deployment. During that short interval, the old Worker can still create a row with plaintext `input_json` and no expiry. The hourly cleanup scrubs any such row and backfills its expiry (`worker/src/retention.ts:17-31`). For release, apply the migration, deploy the Worker immediately, manually trigger the scheduled handler once, and verify no row has `input_json <> 'null'` or a missing expiry. Do not leave a long migration/deployment gap.
+
+## Important fixes verified in the diff
+
+- Unknown or missing delivery types fail closed to source-only instead of becoming paid endpoints.
+- Paid input is parsed and validated before x402 presents a payment requirement.
+- Idempotency keys cannot be reused across Skills or with a changed payload.
+- Daily budgets reject non-finite values and use per-Skill price, not a global price.
+- Conditional D1 reservation prevents two in-flight calls from both consuming the same remaining budget.
+- Agent keys can revoke themselves; revoked keys return 401.
+- Machine search and recommendation share localized aliases and do not pad unrelated recommendations.
+- Public listings expose real input contracts and per-Skill examples for paid runners.
+- Submission and payment-probe failures show actionable user messages instead of raw API JSON.
+- Curated listings disclose pinned upstream commit, source, authorship boundary, license, and no GOKUI resale.
+- Free curated listings generate a commit-pinned, permission-aware “copy for AI install” handoff and wait for user confirmation before installation.
+- Paid invocation plaintext input is not stored; result replay closes at 24 hours and stale idempotency keys cannot trigger a second payment.
+- No-login submission recovery uses a URL fragment and hash-only server storage; the status API returns allowlisted fields.
+- Mobile navigation exposes all primary destinations without clipped or wrapped labels.
+- Language selection uses a dialog/native buttons, restores focus, and updates `lang`/`dir` before hydration.
+
+## Validation evidence
+
+Passed:
+
+- `bun run typecheck`
+- `bun run test` (10 focused search, relevance, input-validation, fail-closed delivery, retention, and scanner-confirmation regressions)
+- `bun run build` (Next static export plus Wrangler deploy dry run)
+- `bun run copy:check`
+- `git diff --check`
+- clean application of migrations `0001` through `0007` to a fresh local D1 database
+- 15/15 skill rows with valid alias JSON, localization JSON, and Chinese risk summaries
+- local API: Chinese search, stopword-only empty search, relevant recommendation, unrelated empty recommendation, invalid-budget rejection, input rejection before payment, Agent revoke then 401
+- real Chromium at 390px and 1440px across home, store, submit, Agents, paid and curated Skill detail, activity, payment explanation, privacy, terms, and 404 surfaces
+- 390px submission failure (422) with actionable correction, followed by corrected success (201), private recovery-link refresh, and invalid recovery failure
+- 390px invalid Agent name and invalid/revoked API-key messages
+- local scheduled-handler purge: HTTP 200, output changed to JSON `null`, and `purged_at` set
+- expired idempotent replay: HTTP 410, no second x402 attempt, stored input/output both JSON `null`
+- internal navigation and Agent manifest links returned HTTP 200 locally
+- no horizontal overflow and no broken images on the reviewed pages
+- Arabic direction switch and focus return from the language dialog
+
+Expected failure:
+
+- `bun run i18n:check` because 58 locale files are missing the newer legal/privacy/failure keys described in DR-007.
+
+Not yet run:
+
+- remote D1 migrations;
+- production x402 smoke after these changes;
+- controlled concurrent paid-call test;
+- Pages/Worker deployment and post-deploy two-request HTTPS verification.
+
+## Release gate
+
+Before deployment:
+
+1. supply and verify the public support contact in DR-006;
+2. re-run type, build, copy, migration, API, 390px, desktop, and failure-path checks after that contact change;
+3. confirm no other task owns overlapping repository or deployment changes;
+4. review the final diff and migration scope;
+5. apply remote migrations `0004`–`0007`, deploy the Worker immediately, manually trigger retention cleanup once, then query the privacy invariants from DR-008;
+6. deploy the static frontend separately and verify API and public URLs with repeated HTTPS requests;
+7. run a controlled low-value x402 smoke and reconcile the response, D1 row, Base transaction, and receiving-wallet balance.
+
+## Primary references
+
+- Cloudflare D1 limits and single-threaded query processing: https://developers.cloudflare.com/d1/platform/limits/
+- Cloudflare D1 `batch()` sequential transaction and rollback behavior: https://developers.cloudflare.com/d1/worker-api/d1-database/
+- Coinbase x402 buyer quickstart: https://docs.cdp.coinbase.com/x402/quickstart-for-buyers
+- x402 exact EVM scheme specification: https://github.com/x402-foundation/x402/blob/main/specs/schemes/exact/scheme_exact_evm.md
+- Coinbase Agentic Wallet security model: https://docs.cdp.coinbase.com/wallets/security-and-policies/security-overview

@@ -48,7 +48,7 @@ export function LanguageSwitcher() {
         type="button"
         className="language-trigger"
         aria-label={`${t("language.button")}: ${current.nativeName}`}
-        aria-haspopup="listbox"
+        aria-haspopup="dialog"
         aria-expanded={open}
         aria-controls="language-options"
         onClick={() => setOpen((value) => !value)}
@@ -60,13 +60,13 @@ export function LanguageSwitcher() {
       </button>
 
       {open && (
-        <div className="language-menu" aria-label={t("language.menuTitle")}>
+        <div className="language-menu" role="dialog" aria-label={t("language.menuTitle")}>
           <div className="language-menu-head">
             <div>
               <div className="kicker !text-[9px]">{t("language.menuTitle")}</div>
               <div className="text-[10px] text-dim mt-1 leading-snug">{t("language.coverage")}</div>
             </div>
-            <button type="button" className="language-close" aria-label={t("language.close")} onClick={() => setOpen(false)}>×</button>
+            <button type="button" className="language-close" aria-label={t("language.close")} onClick={() => { setOpen(false); triggerRef.current?.focus(); }}>×</button>
           </div>
           <input
             ref={searchRef}
@@ -77,18 +77,18 @@ export function LanguageSwitcher() {
             onChange={(event) => setQuery(event.target.value)}
             placeholder={t("language.search")}
           />
-          <div id="language-options" className="language-list" role="listbox" aria-label={t("language.menuTitle")}>
+          <div id="language-options" className="language-list" aria-label={t("language.menuTitle")}>
             {filtered.map((option) => (
               <button
                 type="button"
-                role="option"
-                aria-selected={option.code === locale}
+                aria-pressed={option.code === locale}
                 key={option.code}
                 className={`language-option ${option.code === locale ? "is-active" : ""}`}
                 onClick={() => {
                   setLocale(option.code);
                   setOpen(false);
                   setQuery("");
+                  requestAnimationFrame(() => triggerRef.current?.focus());
                 }}
               >
                 <span className="font-semibold truncate">{option.nativeName}</span>

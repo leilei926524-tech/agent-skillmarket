@@ -59,8 +59,8 @@ export default function Landing() {
           {[
             { v: stats?.skills ?? "—", k: "home.stats.approved" as TranslationKey },
             { v: stats?.settledInvocations ?? "—", k: "home.stats.invocations" as TranslationKey },
-            { v: stats?.network === "eip155:8453" ? t("common.baseMainnet") : t("common.baseSepolia"), k: "home.stats.network" as TranslationKey },
-            { v: "x402 v2", k: "home.noSimulated" as TranslationKey },
+            { v: stats ? (stats.network === "eip155:8453" ? t("common.baseMainnet") : t("common.baseSepolia")) : "—", k: "home.stats.network" as TranslationKey },
+            { v: "BaseScan + D1", k: "home.noSimulated" as TranslationKey },
           ].map((item) => <div key={item.k}><div className="mono text-3xl md:text-4xl font-bold">{item.v}</div><div className="kicker mt-2 !text-[9px]">{t(item.k)}</div></div>)}
         </div>
       </section>

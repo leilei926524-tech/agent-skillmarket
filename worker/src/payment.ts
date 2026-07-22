@@ -11,8 +11,8 @@ function validPayTo(value: string): value is `0x${string}` {
   return /^0x[a-fA-F0-9]{40}$/.test(value) && !/^0x0{40}$/i.test(value);
 }
 
-function getMiddleware(env: Env) {
-  const key = [env.X402_NETWORK, env.X402_FACILITATOR_URL, env.X402_PRICE_USD, env.X402_PAY_TO].join("|");
+function getMiddleware(env: Env, priceUsd: string) {
+  const key = [env.X402_NETWORK, env.X402_FACILITATOR_URL, priceUsd, env.X402_PAY_TO].join("|");
   const existing = middlewareCache.get(key);
   if (existing) return existing;
   const facilitatorConfig = env.X402_FACILITATOR_URL.includes("api.cdp.coinbase.com")
@@ -25,7 +25,7 @@ function getMiddleware(env: Env) {
       "POST /api/v1/skills/:slug/invoke": {
         accepts: [{
           scheme: "exact",
-          price: `$${env.X402_PRICE_USD}`,
+          price: `$${priceUsd}`,
           network: env.X402_NETWORK,
           payTo: env.X402_PAY_TO,
         }],
@@ -68,7 +68,12 @@ export const x402Gate: AppMiddleware = async (c, next) => {
       { network: c.env.X402_NETWORK, facilitator: "CDP" },
     );
   }
-  const middleware = getMiddleware(c.env);
+  const skill = c.get("skill");
+  const priceUsd = Number(skill.price_usd);
+  if (!Number.isFinite(priceUsd) || priceUsd <= 0) {
+    return jsonError(c, 503, "skill_price_invalid", "This paid skill does not have a valid positive price.");
+  }
+  const middleware = getMiddleware(c.env, skill.price_usd);
   const paymentResult = await middleware(c, next);
   if (paymentResult instanceof Response) c.res = paymentResult;
   const invocationId = c.get("invocationId");

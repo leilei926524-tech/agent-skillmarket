@@ -46,11 +46,14 @@ export type SkillRecord = {
   source_url?: string | null;
   source_commit?: string | null;
   source_path?: string | null;
+  search_aliases_json?: string;
+  localizations_json?: string;
 };
 
 export type Variables = {
   agent: AgentRecord;
   skill: SkillRecord;
+  skillInput: Record<string, unknown>;
   invocationId?: string;
 };
 

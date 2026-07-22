@@ -28,6 +28,23 @@ assert(curated.every((skill: Record<string, any>) => (
   && /^[0-9a-f]{40}$/.test(skill.provenance?.source?.commit || "")
 )), "curated catalog provenance or delivery boundary is invalid");
 
+const chineseSearch = await json(`/api/v1/skills?q=${encodeURIComponent("研究用户为什么不购买")}`);
+assert(chineseSearch.response.status === 200 && chineseSearch.body.skills?.[0]?.slug === "customer-research", "Chinese task search did not find Customer Research");
+const stopwordSearch = await json(`/api/v1/skills?q=${encodeURIComponent("and the user")}`);
+assert(stopwordSearch.response.status === 200 && stopwordSearch.body.total === 0, "stopword-only search returned unrelated skills");
+
+const invalidBudget = await json("/api/v1/agents/access", {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({
+    name: `invalid-budget-${nonce}`,
+    ownerEmail: `invalid-budget-${nonce}@example.com`,
+    purpose: "Confirm that non-numeric daily budgets are rejected before an agent is created.",
+    dailyBudgetUsd: "NaN",
+  }),
+});
+assert(invalidBudget.response.status === 422 && invalidBudget.body.error?.code === "invalid_daily_budget", "invalid daily budget was accepted");
+
 const agent = await json("/api/v1/agents/access", {
   method: "POST",
   headers: { "Content-Type": "application/json" },
@@ -46,7 +63,14 @@ const recommendation = await json("/api/v1/agent/recommend", {
   headers: auth,
   body: JSON.stringify({ task: "Check whether a proposed enterprise software discount is within sales guardrails.", maxPriceUsd: 0.01 }),
 });
-assert(recommendation.response.status === 200 && recommendation.body.recommendations?.length > 0, "agent recommendation failed");
+assert(recommendation.response.status === 200 && recommendation.body.recommendations?.[0]?.skill?.slug === "deal-desk-discount-guardrails", "agent recommendation did not rank the relevant skill first");
+
+const unrelatedRecommendation = await json("/api/v1/agent/recommend", {
+  method: "POST",
+  headers: auth,
+  body: JSON.stringify({ task: "and the user should use this task", maxPriceUsd: 0.01 }),
+});
+assert(unrelatedRecommendation.response.status === 200 && unrelatedRecommendation.body.recommendations?.length === 0, "recommendation padded the result with unrelated skills");
 
 const sourceOnly = await json(`/api/v1/skills/${curated[0].slug}/invoke`, {
   method: "POST",
@@ -74,7 +98,7 @@ assert(malicious.response.status === 422 && malicious.body.error?.code === "pres
 const payment = await json("/api/v1/skills/deal-desk-discount-guardrails/invoke", {
   method: "POST",
   headers: { ...auth, "Idempotency-Key": crypto.randomUUID() },
-  body: JSON.stringify({ input: "A customer asks for a 35% discount." }),
+  body: JSON.stringify({ discountPercent: 25, annualContractValueUsd: 100000, termMonths: 24, prepaid: true }),
 });
 assert(payment.response.status === 402, `expected x402 challenge, received ${payment.response.status}`);
 const paymentRequired = payment.response.headers.get("PAYMENT-REQUIRED");
@@ -84,9 +108,14 @@ assert(challenge.x402Version === 2 && challenge.accepts?.[0]?.scheme === "exact"
 if (expectedNetwork) assert(challenge.accepts[0].network === expectedNetwork, `expected ${expectedNetwork}, received ${challenge.accepts[0].network}`);
 if (expectedPayTo) assert(challenge.accepts[0].payTo.toLowerCase() === expectedPayTo, "x402 challenge points to the wrong receiving address");
 
+const revoked = await json("/api/v1/agents/revoke", { method: "POST", headers: auth, body: "{}" });
+assert(revoked.response.status === 200 && revoked.body.agent?.status === "revoked", "agent key could not be revoked");
+const afterRevoke = await json("/api/v1/agent/skills", { headers: auth });
+assert(afterRevoke.response.status === 401, "revoked agent key remained active");
+
 console.log(JSON.stringify({
   ok: true,
   baseUrl,
-  checks: ["health", "durable catalog", "curated provenance", "source-only payment isolation", "agent access", "recommendation", "submission security rejection", "x402 v2 challenge"],
+  checks: ["health", "durable catalog", "curated provenance", "Chinese search", "stopword rejection", "budget validation", "source-only payment isolation", "agent access", "relevant recommendation", "empty unrelated recommendation", "submission security rejection", "x402 v2 challenge", "agent key revocation"],
   payment: { network: challenge.accepts[0].network, amount: challenge.accepts[0].amount, asset: challenge.accepts[0].asset, payTo: challenge.accepts[0].payTo },
 }, null, 2));

@@ -174,7 +174,7 @@
   "submit.uploadStep": "02 · Téléchargez le résultat",
   "submit.uploadTitle": "Téléchargez le SKILL.md votre AI créé",
   "submit.uploadBody": "Nous lirons son nom, sa description et son auteur pour compléter autant que possible la liste.",
-  "submit.paste": "Ou collez :::41001 :::",
+  "submit.paste": "Ou collez le SKILL.md",
   "submit.ready": "Fichier prêt",
   "submit.reviewStep": "03 · Vérifier et soumettre",
   "submit.reviewTitle": "Confirmez les détails",
