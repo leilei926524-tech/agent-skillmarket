@@ -26,7 +26,7 @@ const NAV_GROUPS = [
     items: [
       { href: "/submit", label: "nav.submit", icon: "✦" },
       { href: "/agents", label: "nav.agentGate", icon: "⟁" },
-      { href: "/wallet", label: "nav.stack", icon: "⬟" },
+      { href: "/wallet", label: "nav.wallet", icon: "⬟" },
     ],
   },
 ] satisfies { group: string; items: { href: string; label: TranslationKey; icon: string }[] }[];
