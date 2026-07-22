@@ -59,5 +59,5 @@ Screenshots are stored locally under `output/playwright/` and intentionally igno
 
 - Do not add runtime analytics until the first-party allow-listed event endpoint, 30-day retention, and synthetic/team classification in `.agents/analytics-plan.md` are implemented together.
 - The Chinese aliases currently improve the human storefront only. Agent API ranking still needs catalog-level multilingual synonyms or embeddings with a measurable relevance set.
-- The remaining 58 locales inherit English for the new trust pages. Translate them only after English and Chinese policy wording is approved.
+- English, Simplified Chinese, and Japanese contain the full trust-page copy. The remaining 57 locales inherit English for newer trust-page keys and should be translated in reviewed batches rather than generated all at once.
 - Replace proxy customer research with five demand-side and five supply-side interviews before changing the homepage positioning again.

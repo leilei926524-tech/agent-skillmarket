@@ -115,11 +115,11 @@ However, local development lacks production facilitator credentials and cannot e
 
 The UI and `security.txt` currently link to GitHub Security Advisories. A new user may not be able to use that route unless repository private vulnerability reporting and permissions are configured. Replace it with a real team-controlled support/security email or prove that the GitHub private-reporting route works from a signed-out or ordinary external account. The production release does not claim that such an email exists.
 
-### DR-007 — Low — 58 locale files do not yet contain newer legal and failure keys
+### DR-007 — Low — 57 locale files do not yet contain newer legal and failure keys
 
 **Status: known deferred work.**
 
-English and Simplified Chinese contain the current copy. The other 58 supported locale files fall back to English for newer footer, request-failure, privacy, and terms keys. `bun run i18n:check` correctly fails and should remain a visible release-quality debt; it was not suppressed. This review intentionally did not mass-generate those translations. A separate full-tree scan found and removed machine placeholder tokens from 28 existing submit-flow strings across Amharic, Danish, French, Icelandic, Korean, Norwegian, Polish, Somali, Swahili, Swedish, Tamil, and Vietnamese.
+English, Simplified Chinese, and Japanese now contain the complete current 219-key copy set. The remaining 57 locale files fall back to English for newer footer, request-failure, privacy, and terms keys. `bun run i18n:check` correctly fails and remains a visible release-quality debt; it was not suppressed. `bun run i18n:check:core` provides a narrow collaboration gate for the reviewed English, Chinese, and Japanese files. This review intentionally did not mass-generate the remaining translations. A separate full-tree scan found and removed machine placeholder tokens from 28 existing submit-flow strings across Amharic, Danish, French, Icelandic, Korean, Norwegian, Polish, Somali, Swahili, Swedish, Tamil, and Vietnamese.
 
 ### DR-008 — Low — deployment order can briefly expose legacy retention behavior
 
@@ -173,10 +173,12 @@ Passed:
 - two consecutive HTTPS passes returned `200` for the homepage, health, manifest, store, submit, Agent, wallet, activity, privacy, terms, robots, sitemap, and `security.txt`
 - production browser QA after client hydration: 390×844 across nine routes and 1440×900 across six core routes, with zero horizontal overflow and zero broken images
 - deployed root HTML SHA-256 matched the local production export
+- English, Simplified Chinese, and Japanese each contain 219 non-empty keys; the scoped three-language check, public-copy check, build, and production browser QA passed
+- Japanese production QA covered home, submission, Agent access, privacy, and terms at 390×844 plus the desktop homepage at 1440×900, with no horizontal overflow or broken images
 
 Expected failure:
 
-- `bun run i18n:check` because 58 locale files are missing the newer legal/privacy/failure keys described in DR-007.
+- `bun run i18n:check` because 57 locale files are missing the newer legal/privacy/failure keys described in DR-007.
 
 Not yet run:
 
@@ -187,7 +189,7 @@ Not yet run:
 
 1. add and verify a team-controlled support/security email, then update privacy, terms, and `security.txt` together;
 2. run a controlled low-value concurrent x402 exercise and reconcile buyer responses, D1 rows, Base transactions, and the receiving-wallet balance;
-3. translate the newer legal, privacy, and failure keys in the 58 deferred locale files after the English and Chinese wording is approved;
+3. translate the newer legal, privacy, and failure keys in the 57 deferred locale files with the same reviewed-language gate used for English, Chinese, and Japanese;
 4. add abuse controls before broad public promotion: Cloudflare rate limiting, Turnstile or verified accounts for human forms, and operational alerts;
 5. enable an HTTP-to-HTTPS redirect at the zone level if the team wants every plaintext request upgraded automatically; the canonical product and all verified entry points already use HTTPS.
 
