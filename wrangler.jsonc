@@ -10,6 +10,14 @@
     {
       "pattern": "gokui.mesalaunch.com",
       "custom_domain": true
+    },
+    {
+      "pattern": "tryexpertos.com",
+      "custom_domain": true
+    },
+    {
+      "pattern": "www.tryexpertos.com",
+      "custom_domain": true
     }
   ],
   "assets": {
