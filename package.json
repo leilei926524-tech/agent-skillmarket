@@ -10,6 +10,7 @@
     "test": "bun test worker/src/*.test.ts",
     "typecheck": "tsc -p worker/tsconfig.json --noEmit",
     "i18n:check": "bun run scripts/check-i18n.ts",
+    "i18n:check:core": "bun run scripts/check-i18n.ts --locales=en,zh-CN,ja",
     "copy:check": "bun run scripts/check-public-copy.ts",
     "smoke": "bun run scripts/smoke.ts",
     "buyer:invoke": "bun run examples/x402-buyer.ts",
