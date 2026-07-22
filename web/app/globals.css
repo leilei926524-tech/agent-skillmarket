@@ -133,6 +133,8 @@ body {
 }
 .brand-wordmark {
   display: inline-flex;
+  direction: ltr;
+  unicode-bidi: isolate;
   align-items: baseline;
   font-size: clamp(17px, 1.5vw, 19px);
   font-weight: 820;
@@ -314,6 +316,38 @@ body {
   outline: none;
 }
 .field:focus, .code-input:focus { border-color: var(--violet); box-shadow: 0 0 0 3px rgba(43, 99, 246, 0.14); }
+.file-picker {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 14px;
+}
+.file-input-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+.file-picker-action {
+  min-height: 44px;
+  cursor: pointer;
+}
+.file-input-sr:focus-visible + .file-picker-action {
+  outline: 3px solid var(--foreground);
+  outline-offset: 3px;
+}
+.file-picker-status {
+  min-width: 0;
+  color: var(--dim);
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: 11px;
+  overflow-wrap: anywhere;
+}
 .code-input {
   display: block;
   width: 100%;

@@ -176,6 +176,7 @@ The body must include: scope, prerequisites, workflow, inputs and outputs, safet
 export default function SubmitSkill() {
   const { locale, t } = useI18n();
   const [form, setForm] = useState(emptyForm);
+  const [selectedFileName, setSelectedFileName] = useState("");
   const [copied, setCopied] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -264,12 +265,14 @@ export default function SubmitSkill() {
     setReceipt(null);
     setRecoveryUrl("");
     setRecoveryError("");
+    setSelectedFileName("");
     setForm(emptyForm);
     window.history.replaceState(null, "", `${window.location.pathname}${window.location.search}`);
   }
 
   async function onFile(file?: File) {
     if (!file) return;
+    setSelectedFileName(file.name);
     setError("");
     setErrorActions([]);
     if (!/\.(?:md|markdown)$/i.test(file.name)) { setError(t("submit.fileError")); return; }
@@ -348,7 +351,27 @@ export default function SubmitSkill() {
                   <p className="text-sm text-dim leading-relaxed mt-3">{t("submit.uploadBody")}</p>
                 </div>
               </div>
-              <label className="label mt-6">{t("submit.upload")}<input className="field" type="file" accept=".md,.markdown,text/markdown" onChange={(event) => onFile(event.target.files?.[0])} /></label>
+              <div className="mt-6">
+                <div className="label mb-2">{t("submit.upload")}</div>
+                <div className="file-picker">
+                  <input
+                    id="skill-file-upload"
+                    className="file-input-sr"
+                    type="file"
+                    accept=".md,.markdown,text/markdown"
+                    aria-describedby="skill-file-status"
+                    onChange={(event) => {
+                      const file = event.currentTarget.files?.[0];
+                      void onFile(file);
+                      event.currentTarget.value = "";
+                    }}
+                  />
+                  <label className="btn-outline file-picker-action" htmlFor="skill-file-upload">{t("submit.upload")}</label>
+                  <span id="skill-file-status" className="file-picker-status" aria-live="polite" aria-atomic="true">
+                    {selectedFileName || ".md · .markdown"}
+                  </span>
+                </div>
+              </div>
               <details className="mt-5 border-t border-line/70 pt-4">
                 <summary className="cursor-pointer text-sm font-semibold">{t("submit.paste")}</summary>
                 <textarea id="skill-markdown-paste" aria-label={t("submit.paste")} className="code-input mt-4 min-h-56" spellCheck={false} value={form.skillMarkdown} onChange={(event) => setSkillMarkdown(event.target.value)} />

@@ -11,6 +11,7 @@ const publicSurfaces = [
   "worker/src",
 ];
 const forbidden = [
+  /\bGOKUI\b/,
   /\bOKX\b/i,
   /ОККС/i,
   /借鉴/,
@@ -56,9 +57,13 @@ const problems: string[] = [];
 for (const file of files) {
   const content = await readFile(file, "utf8");
   const lines = content.split("\n");
+  const filePath = relative(root, file);
   for (const [index, line] of lines.entries()) {
     for (const pattern of forbidden) {
-      if (pattern.test(line)) problems.push(`${relative(root, file)}:${index + 1}: ${pattern}`);
+      const legacyBrandCompatibility = filePath === "worker/src/utils.ts"
+        && (line.includes('replaceAll("GOKUI') || line.includes('["GOKUI Labs"'));
+      if (pattern.source === "\\bGOKUI\\b" && legacyBrandCompatibility) continue;
+      if (pattern.test(line)) problems.push(`${filePath}:${index + 1}: ${pattern}`);
       pattern.lastIndex = 0;
     }
   }
