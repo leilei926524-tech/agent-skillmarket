@@ -6,6 +6,8 @@ import { BodyError, jsonError, nowIso, parseJson, publicSkill, randomToken, read
 import { scanSkill } from "./scan";
 import { executeSkill } from "./execution";
 import { paymentSignatureHash, x402Gate } from "./payment";
+import { sendCancelledEmail, sendOfferEmail, sendPaymentEmail } from "./email";
+import { sendUSDCPayment } from "./payout";
 
 const app = new Hono<{ Bindings: Env; Variables: Variables }>();
 type AppEnv = { Bindings: Env; Variables: Variables };
@@ -121,8 +123,12 @@ app.post("/api/v1/submissions", async (c) => {
   const publisherName = String(input.publisherName || "").trim();
   const publisherEmail = String(input.publisherEmail || "").trim().toLowerCase();
   const githubUrl = String(input.githubUrl || "").trim();
+  const payoutWallet = String(input.payoutWallet || "").trim();
   const categories = Array.isArray(input.categories) ? input.categories.map(String).map((v) => v.trim()).filter(Boolean).slice(0, 3) : [];
   const usageExamples = Array.isArray(input.usageExamples) ? input.usageExamples.map(String).map((v) => v.trim()).filter(Boolean).slice(0, 3) : [];
+  if (payoutWallet && !/^0x[a-fA-F0-9]{40}$/.test(payoutWallet)) {
+    return jsonError(c, 422, "invalid_payout_wallet", "payoutWallet must be a valid EVM address (0x + 40 hex chars).");
+  }
   if (!title || title.length > 100 || description.length < 40 || description.length > 1024) {
     return jsonError(c, 422, "invalid_listing", "Title is required and description must contain 40–1024 characters.");
   }
@@ -156,8 +162,8 @@ app.post("/api/v1/submissions", async (c) => {
       id, slug, title, description, categories_json, usage_examples_json,
       publisher_name, publisher_email, github_url, skill_markdown, version,
       license, scan_result_json, risk_level, status, review_token_hash,
-      created_at, updated_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'reviewing', ?, ?, ?)`,
+      payout_wallet, created_at, updated_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'reviewing', ?, ?, ?, ?)`,
   ).bind(
     id,
     scan.manifest.name,
@@ -174,6 +180,7 @@ app.post("/api/v1/submissions", async (c) => {
     JSON.stringify(scan),
     scan.riskLevel,
     await sha256(reviewToken),
+    payoutWallet || null,
     timestamp,
     timestamp,
   ).run();
@@ -397,9 +404,9 @@ app.post("/api/v1/admin/submissions/:id/approve", async (c) => {
       c.env.DB.prepare(
         `INSERT INTO skills (
           id, slug, title, description, category, tags_json, version, license,
-          publisher_name, skill_markdown, runner, price_usd, risk_level,
-          risk_summary, status, created_at, updated_at
-        ) VALUES (?, ?, ?, ?, ?, '[]', ?, ?, ?, ?, 'instructions', ?, ?, ?, 'approved', ?, ?)`,
+          publisher_name, publisher_email, skill_markdown, runner, price_usd, risk_level,
+          risk_summary, payout_wallet, status, created_at, updated_at
+        ) VALUES (?, ?, ?, ?, ?, '[]', ?, ?, ?, ?, ?, 'instructions', ?, ?, ?, ?, 'approved', ?, ?)`,
       ).bind(
         crypto.randomUUID(),
         submission.slug,
@@ -409,10 +416,12 @@ app.post("/api/v1/admin/submissions/:id/approve", async (c) => {
         submission.version,
         submission.license,
         submission.publisher_name,
+        submission.publisher_email || null,
         submission.skill_markdown,
         c.env.X402_PRICE_USD,
         submission.risk_level,
         "Automated pre-scan passed and a marketplace reviewer approved the listing. Approval is not an endorsement; review permissions before use.",
+        submission.payout_wallet || null,
         timestamp,
         timestamp,
       ),
@@ -435,6 +444,208 @@ app.post("/api/v1/admin/submissions/:id/reject", async (c) => {
   ).bind(reason, nowIso(), c.req.param("id")).run();
   if (!result.meta.changes) return jsonError(c, 404, "submission_not_found", "No reviewing submission uses that id.");
   return c.json({ submission: { id: c.req.param("id"), status: "rejected", reason } });
+});
+
+// ─────────────────────────────────────────────────────────────
+// Freelancer registry + agent task-matching + email dispatch
+// ─────────────────────────────────────────────────────────────
+
+type FreelancerRecord = {
+  id: string; name: string; email: string; bio: string;
+  skills_json: string; hourly_rate_usd: string | null;
+  availability: string; verified: number;
+  created_at: string; updated_at: string;
+};
+
+type TaskRequestRecord = {
+  id: string; agent_id: string | null; title: string; description: string;
+  required_skills_json: string; budget_usd: string | null;
+  status: string; matched_freelancer_id: string | null;
+  offer_expires_at: string | null; submission_url: string | null;
+  submission_note: string | null; created_at: string; updated_at: string;
+};
+
+// Register as a freelancer / skill builder
+app.post("/api/v1/freelancers/register", async (c) => {
+  const body = await readJsonBody(c, 10_000);
+  if (!body || typeof body !== "object") return jsonError(c, 422, "invalid_body", "Body must be JSON object.");
+  const input = body as Record<string, unknown>;
+  const name = String(input.name || "").trim();
+  const email = String(input.email || "").trim().toLowerCase();
+  const bio = String(input.bio || "").trim();
+  const skills = Array.isArray(input.skills) ? input.skills.map(String).map((s) => s.trim().toLowerCase()).filter(Boolean).slice(0, 20) : [];
+  const hourlyRate = input.hourlyRateUsd ? String(Number(input.hourlyRateUsd || 0).toFixed(2)) : null;
+  if (!name || name.length > 100) return jsonError(c, 422, "invalid_name", "Name is required and must be under 100 characters.");
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return jsonError(c, 422, "invalid_email", "A valid email is required.");
+  if (bio.length < 20 || bio.length > 1000) return jsonError(c, 422, "invalid_bio", "Bio must be 20–1000 characters.");
+  if (skills.length === 0) return jsonError(c, 422, "skills_required", "Provide at least one skill keyword.");
+  const id = crypto.randomUUID();
+  const now = nowIso();
+  try {
+    await c.env.DB.prepare(
+      `INSERT INTO freelancers (id, name, email, bio, skills_json, hourly_rate_usd, availability, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, 'available', ?, ?)`,
+    ).bind(id, name, email, bio, JSON.stringify(skills), hourlyRate, now, now).run();
+  } catch (err) {
+    if (String(err).includes("UNIQUE")) return jsonError(c, 409, "email_taken", "This email is already registered.");
+    throw err;
+  }
+  return c.json({ freelancer: { id, name, email, skills, createdAt: now }, message: "Registered. You will receive task offer emails when matched." }, 201);
+});
+
+// Agent: describe an unfulfilled task → platform finds best freelancer and sends offer email
+app.post("/api/v1/tasks/match", requireAgent, async (c) => {
+  const body = await readJsonBody(c, 10_000);
+  if (!body || typeof body !== "object") return jsonError(c, 422, "invalid_body", "Body must be JSON object.");
+  const input = body as Record<string, unknown>;
+  const title = String(input.title || "").trim();
+  const description = String(input.description || "").trim();
+  const requiredSkills = Array.isArray(input.requiredSkills) ? input.requiredSkills.map(String).map((s) => s.trim().toLowerCase()).filter(Boolean) : [];
+  const budgetUsd = input.budgetUsd ? String(Number(input.budgetUsd).toFixed(2)) : null;
+  if (!title || title.length > 200) return jsonError(c, 422, "invalid_title", "Title required, max 200 chars.");
+  if (description.length < 30 || description.length > 2000) return jsonError(c, 422, "invalid_description", "Description must be 30–2000 chars.");
+  // Find matching available freelancers by skill overlap
+  const allFreelancers = await c.env.DB.prepare(
+    "SELECT * FROM freelancers WHERE availability = 'available' AND verified = 1 ORDER BY created_at",
+  ).all<FreelancerRecord>();
+  const tokens = [...new Set([...requiredSkills, ...title.toLowerCase().match(/[a-z0-9]{3,}/g) || []])];
+  const ranked = allFreelancers.results
+    .map((f) => {
+      const fSkills = parseJson<string[]>(f.skills_json, []);
+      const matched = tokens.filter((t) => fSkills.some((s) => s.includes(t) || t.includes(s)));
+      return { freelancer: f, score: matched.length };
+    })
+    .filter((r) => r.score > 0)
+    .sort((a, b) => b.score - a.score);
+  if (ranked.length === 0) {
+    return jsonError(c, 404, "no_match", "No available verified freelancers matched the required skills.", { requiredSkills });
+  }
+  const best = ranked[0].freelancer;
+  const taskId = crypto.randomUUID();
+  const now = nowIso();
+  const expiresAt = new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString();
+  await c.env.DB.prepare(
+    `INSERT INTO task_requests
+       (id, agent_id, title, description, required_skills_json, budget_usd,
+        status, matched_freelancer_id, offer_expires_at, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, 'matching', ?, ?, ?, ?)`,
+  ).bind(taskId, c.get("agent").id, title, description, JSON.stringify(requiredSkills), budgetUsd, best.id, expiresAt, now, now).run();
+  // Send offer email (fire and forget)
+  const origin = new URL(c.req.url).origin;
+  c.executionCtx.waitUntil(
+    sendOfferEmail(c.env, {
+      to: best.email,
+      taskId,
+      taskTitle: title,
+      description,
+      budgetUsd,
+      origin,
+    }).then(async (result) => {
+      await c.env.DB.prepare(
+        `INSERT INTO email_log (id, task_request_id, recipient_email, template, status, provider_id, created_at)
+         VALUES (?, ?, ?, 'offer', ?, ?, ?)`,
+      ).bind(crypto.randomUUID(), taskId, best.email, result.ok ? "sent" : "failed", result.id, nowIso()).run();
+      await c.env.DB.prepare("UPDATE task_requests SET status = 'offered', updated_at = ? WHERE id = ?").bind(nowIso(), taskId).run();
+    }),
+  );
+  return c.json({
+    taskId,
+    status: "offered",
+    matchedFreelancer: { name: best.name, skills: parseJson<string[]>(best.skills_json, []) },
+    offerExpiresAt: expiresAt,
+    message: `Offer email sent to ${best.name}. Awaiting acceptance.`,
+  }, 201);
+});
+
+// Freelancer accepts a task offer (email link or API call)
+app.post("/api/v1/tasks/:id/accept", async (c) => {
+  const task = await c.env.DB.prepare(
+    "SELECT tr.*, f.email AS freelancer_email FROM task_requests tr JOIN freelancers f ON f.id = tr.matched_freelancer_id WHERE tr.id = ?",
+  ).bind(c.req.param("id")).first<TaskRequestRecord & { freelancer_email: string }>();
+  if (!task) return jsonError(c, 404, "task_not_found", "Task not found.");
+  if (task.status !== "offered") return jsonError(c, 409, "wrong_status", `Task is already '${task.status}'.`);
+  if (task.offer_expires_at && new Date(task.offer_expires_at) < new Date()) {
+    return jsonError(c, 410, "offer_expired", "This offer has expired.");
+  }
+  await c.env.DB.prepare("UPDATE task_requests SET status = 'accepted', updated_at = ? WHERE id = ?").bind(nowIso(), task.id).run();
+  return c.json({ taskId: task.id, status: "accepted", message: "Task accepted. Submit your work via POST /api/v1/tasks/:id/deliver." });
+});
+
+// Freelancer delivers work (URL + note)
+app.post("/api/v1/tasks/:id/deliver", async (c) => {
+  const body = await readJsonBody(c, 5_000);
+  const input = body && typeof body === "object" ? body as Record<string, unknown> : {};
+  const submissionUrl = String(input.submissionUrl || "").trim();
+  const note = String(input.note || "").trim();
+  if (!submissionUrl) return jsonError(c, 422, "url_required", "Provide submissionUrl with the deliverable link.");
+  try { new URL(submissionUrl); } catch { return jsonError(c, 422, "invalid_url", "submissionUrl must be a valid URL."); }
+  const task = await c.env.DB.prepare("SELECT * FROM task_requests WHERE id = ?").bind(c.req.param("id")).first<TaskRequestRecord>();
+  if (!task) return jsonError(c, 404, "task_not_found", "Task not found.");
+  if (task.status !== "accepted") return jsonError(c, 409, "wrong_status", `Task must be 'accepted' to deliver; current: '${task.status}'.`);
+  await c.env.DB.prepare(
+    "UPDATE task_requests SET status = 'delivered', submission_url = ?, submission_note = ?, updated_at = ? WHERE id = ?",
+  ).bind(submissionUrl, note || null, nowIso(), task.id).run();
+  return c.json({ taskId: task.id, status: "delivered", message: "Delivery recorded. Awaiting admin approval and payment." });
+});
+
+// Admin approves delivery and triggers payment
+app.post("/api/v1/admin/tasks/:id/approve-and-pay", async (c) => {
+  if (!adminAuthorized(c)) return jsonError(c, 403, "admin_required", "A valid X-Admin-Key is required.");
+  const task = await c.env.DB.prepare(
+    `SELECT tr.*, f.email AS freelancer_email, f.name AS freelancer_name
+     FROM task_requests tr JOIN freelancers f ON f.id = tr.matched_freelancer_id WHERE tr.id = ?`,
+  ).bind(c.req.param("id")).first<TaskRequestRecord & { freelancer_email: string; freelancer_name: string }>();
+  if (!task) return jsonError(c, 404, "task_not_found", "Task not found.");
+  if (task.status !== "delivered") return jsonError(c, 409, "wrong_status", "Task must be 'delivered' to approve.");
+  // Pull payout wallet from request body or freelancer record
+  const body = await readJsonBody(c, 2_000).catch(() => null);
+  const input = body && typeof body === "object" ? body as Record<string, unknown> : {};
+  const payoutWallet = String(input.payoutWallet || "").trim();
+  if (!payoutWallet || !/^0x[a-fA-F0-9]{40}$/.test(payoutWallet)) {
+    return jsonError(c, 422, "payout_wallet_required", "Provide payoutWallet (EVM address) to send USDC to freelancer.");
+  }
+  const amountUsd = task.budget_usd ?? "0.00";
+  if (Number(amountUsd) <= 0) return jsonError(c, 422, "no_budget", "Task has no budget set. Cannot pay.");
+  await c.env.DB.prepare("UPDATE task_requests SET status = 'paid', updated_at = ? WHERE id = ?").bind(nowIso(), task.id).run();
+  // Fire payment + email in background
+  c.executionCtx.waitUntil(
+    sendUSDCPayment(c.env, payoutWallet, amountUsd).then(async (result) => {
+      await sendPaymentEmail(c.env, {
+        to: task.freelancer_email,
+        taskTitle: task.title,
+        amountUsd,
+        txHash: result.txHash,
+      });
+      await c.env.DB.prepare(
+        `INSERT INTO email_log (id, task_request_id, recipient_email, template, status, created_at)
+         VALUES (?, ?, ?, 'payment_sent', 'sent', ?)`,
+      ).bind(crypto.randomUUID(), task.id, task.freelancer_email, nowIso()).run();
+    }),
+  );
+  return c.json({
+    taskId: task.id,
+    status: "paid",
+    amountUsd,
+    recipientWallet: payoutWallet,
+    message: `Payment of $${amountUsd} USDC triggered. Email confirmation sent to ${task.freelancer_name}.`,
+  });
+});
+
+// Payout status — sellers can check their earnings
+app.get("/api/v1/public/payouts", async (c) => {
+  const wallet = (c.req.query("wallet") || "").trim().toLowerCase();
+  if (!/^0x[a-f0-9]{40}$/.test(wallet)) {
+    return jsonError(c, 422, "invalid_wallet", "Provide a valid EVM wallet address.");
+  }
+  const rows = await c.env.DB.prepare(
+    `SELECT p.id, p.amount_usd, p.network, p.status, p.tx_hash, p.created_at, p.settled_at,
+            s.slug AS skill_slug, s.title AS skill_title
+       FROM payouts p
+       JOIN skills s ON s.id = p.skill_id
+      WHERE lower(p.recipient_wallet) = ?
+      ORDER BY p.created_at DESC LIMIT 50`,
+  ).bind(wallet).all<Record<string, unknown>>();
+  return c.json({ wallet, payouts: rows.results });
 });
 
 app.notFound((c) => {

@@ -23,13 +23,13 @@
     "@x402/fetch": "^2.19.0",
     "@x402/hono": "^2.19.0",
     "hono": "^4.9.9",
+    "viem": "^2.38.6",
     "yaml": "^2.8.1"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^5.20260721.1",
     "@types/node": "^24.0.0",
     "typescript": "^5.9.3",
-    "viem": "^2.38.6",
     "wrangler": "^4.94.0"
   }
 }
