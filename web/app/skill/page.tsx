@@ -103,7 +103,7 @@ Skill：${display.title}
 固定 commit：${source.commit || "未提供"}
 仓库路径：${source.path || "未提供"}
 许可证：${skill.license}
-GOKUI 风险提示：${display.riskSummary}
+ExpertOS 风险提示：${display.riskSummary}
 
 请按以下顺序操作：
 1. 先读取固定 commit 下的完整文件、依赖、脚本和许可证，不要改用最新版或其他分支。
@@ -120,7 +120,7 @@ Pinned source: ${source.url}
 Pinned commit: ${source.commit || "not provided"}
 Repository path: ${source.path || "not provided"}
 License: ${skill.license}
-GOKUI risk note: ${display.riskSummary}
+ExpertOS risk note: ${display.riskSummary}
 
 Follow this order:
 1. Inspect the complete files, dependencies, scripts, and license at the pinned commit. Do not switch to the latest branch or another version.
@@ -132,7 +132,7 @@ Follow this order:
 
 If this client cannot install Skills, the pinned files are incomplete, the license is unclear, or the risk cannot be assessed, stop and explain why. Do not guess or bypass the limitation.`) : "";
   const curl = skill.invokeUrl ? `curl -i -X POST '${skill.invokeUrl}' \\
-  -H 'Authorization: Bearer $GOKUI_API_KEY' \\
+  -H 'Authorization: Bearer $EXPERTOS_API_KEY' \\
   -H 'Idempotency-Key: your-unique-request-id' \\
   -H 'Content-Type: application/json' \\
   -d '${JSON.stringify(skill.exampleInput || {})}'` : "";
@@ -163,7 +163,7 @@ If this client cannot install Skills, the pinned files are incomplete, the licen
     <main className="mx-auto max-w-[1100px] px-6 pb-10 w-full">
       <section className="pt-10 pb-8">
         <Link href="/store" className="meta text-[10px] text-violet">{t("skill.back")}</Link>
-        <div className="kicker mt-6 mb-3">{display.category} · {versionLabel}{isCurated ? ` · ${isZh ? "GOKUI 社区精选" : "GOKUI community pick"}` : ""}</div>
+        <div className="kicker mt-6 mb-3">{display.category} · {versionLabel}{isCurated ? ` · ${isZh ? "ExpertOS 社区精选" : "ExpertOS community pick"}` : ""}</div>
         <h1 className="display-hero text-4xl md:text-6xl">{display.title}</h1>
         <p className="mt-5 text-lg leading-relaxed max-w-3xl">{display.description}</p>
       </section>
@@ -189,7 +189,7 @@ If this client cannot install Skills, the pinned files are incomplete, the licen
                 <summary className="cursor-pointer text-sm font-semibold">{isZh ? "预览给 AI 的安装指令" : "Preview the AI install handoff"}</summary>
                 <pre className="code-block whitespace-pre-wrap max-h-96 overflow-auto mt-4">{installPrompt}</pre>
               </details>
-              <p className="text-xs text-dim leading-relaxed mt-5">{isZh ? "这是 GOKUI 主动筛选的索引，不是原作者提交或合作入驻。安装前仍需在上游仓库核对完整文件、依赖和许可证。" : "This is a GOKUI-curated index, not an author submission or partnership. You must still verify the complete files, dependencies, and license in the upstream repository before installation."}</p>
+              <p className="text-xs text-dim leading-relaxed mt-5">{isZh ? "这是 ExpertOS 主动筛选的索引，不是原作者提交或合作入驻。安装前仍需在上游仓库核对完整文件、依赖和许可证。" : "This is an ExpertOS-curated index, not an author submission or partnership. You must still verify the complete files, dependencies, and license in the upstream repository before installation."}</p>
             </>
           ) : (
             <>

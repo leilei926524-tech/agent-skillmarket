@@ -68,7 +68,7 @@ export default function Store() {
             <div className="meta text-[9px] text-dim mt-1">{skill.publisher} · {versionLabel}</div>
           </div>
           <div className="meta text-[10px] text-right">
-            <span className="text-violet">{curated ? (isZh ? "GOKUI 精选" : "GOKUI curated") : "X402"}</span><br />
+            <span className="text-violet">{curated ? (isZh ? "ExpertOS 精选" : "ExpertOS curated") : "X402"}</span><br />
             {curated ? (sourceCommit ? `commit ${sourceCommit}` : (isZh ? "固定上游版本" : "pinned upstream")) : `${skill.invokes} ${t("store.settled")}`}
           </div>
         </div>
@@ -91,12 +91,12 @@ export default function Store() {
           <div className="flex flex-wrap items-end justify-between gap-5 mb-5">
             <div>
               <div className="kicker mb-2">{isZh ? "固定版本 · 免费安装" : "Pinned versions · free to install"}</div>
-              <h2 id="curated-skills-title" className="display-hero text-3xl md:text-5xl">{isZh ? "GOKUI 社区精选" : "GOKUI community picks"}</h2>
+              <h2 id="curated-skills-title" className="display-hero text-3xl md:text-5xl">{isZh ? "ExpertOS 社区精选" : "ExpertOS community picks"}</h2>
             </div>
             <p className="max-w-xl text-sm text-dim leading-relaxed">
               {isZh
-                ? "这些 Skill 由 GOKUI 从可信上游筛选并固定到已审版本。原作者没有在 GOKUI 入驻；我们不代售内容。打开后可复制一段安全交接指令，让你的 AI 检查并安装。"
-                : "GOKUI selected these skills from trusted upstream repositories and pinned the reviewed versions. Their authors have not claimed these listings and GOKUI does not resell them. Open one to copy a guarded handoff for your AI to inspect and install."}
+                ? "这些 Skill 由 ExpertOS 从可信上游筛选并固定到已审版本。原作者没有在 ExpertOS 入驻；我们不代售内容。打开后可复制一段安全交接指令，让你的 AI 检查并安装。"
+                : "ExpertOS selected these skills from trusted upstream repositories and pinned the reviewed versions. Their authors have not claimed these listings and ExpertOS does not resell them. Open one to copy a guarded handoff for your AI to inspect and install."}
             </p>
           </div>
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">{curatedSkills.map(card)}</div>

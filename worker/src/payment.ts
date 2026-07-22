@@ -29,7 +29,7 @@ function getMiddleware(env: Env, priceUsd: string) {
           network: env.X402_NETWORK,
           payTo: env.X402_PAY_TO,
         }],
-        description: "Invoke one approved GOKUI skill for a fixed USDC price; returns JSON.",
+        description: "Invoke one approved ExpertOS skill for a fixed USDC price; returns JSON.",
         mimeType: "application/json",
       },
     },

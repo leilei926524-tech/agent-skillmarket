@@ -20,13 +20,13 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://tryexpertos.com"),
-  title: "GOKUI — Expert Skills for AI Agents",
+  title: "ExpertOS — Expert Skills for AI Agents",
   description:
-    "GOKUI is an Agent Skill marketplace for reviewed task methods: browse pinned sources, submit SKILL.md, and let Agents discover and pay for hosted APIs.",
+    "ExpertOS is an Agent Skill marketplace for reviewed task methods: browse pinned sources, submit SKILL.md, and let Agents discover and pay for hosted APIs.",
   alternates: { canonical: "/" },
   robots: { index: true, follow: true },
   openGraph: {
-    title: "GOKUI — Expert Skills for AI Agents",
+    title: "ExpertOS — Expert Skills for AI Agents",
     description: "Reuse reviewed Skills shaped by real practice, so your AI can handle each job with a clearer method and fewer guesses.",
     type: "website",
     url: "/",
@@ -34,12 +34,12 @@ export const metadata: Metadata = {
       url: "/og.png",
       width: 1734,
       height: 907,
-      alt: "GOKUI — Put expert know-how to work in your AI.",
+      alt: "ExpertOS — Put expert know-how to work in your AI.",
     }],
   },
   twitter: {
     card: "summary_large_image",
-    title: "GOKUI — Expert Skills for AI Agents",
+    title: "ExpertOS — Expert Skills for AI Agents",
     description: "Reuse reviewed Skills shaped by real practice, so your AI can handle each job with a clearer method and fewer guesses.",
     images: ["/og.png"],
   },
@@ -57,7 +57,7 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
-        <Script id="gokui-locale-bootstrap" strategy="beforeInteractive" dangerouslySetInnerHTML={{ __html: localeBootstrap }} />
+        <Script id="expertos-locale-bootstrap" strategy="beforeInteractive" dangerouslySetInnerHTML={{ __html: localeBootstrap }} />
         <I18nProvider>
           <SkipLink />
           <ChartPaper />

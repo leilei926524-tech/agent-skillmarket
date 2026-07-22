@@ -35,9 +35,9 @@ export function Nav() {
   const { t } = useI18n();
   return (
     <header className="sticky top-0 z-40 bg-background/90 border-b border-line backdrop-blur-sm">
-      <div className="mx-auto max-w-[1360px] px-4 md:px-6 min-h-14 flex flex-wrap md:flex-nowrap items-center gap-x-3 md:gap-x-4 gap-y-0">
-        <Link href="/" className="font-extrabold tracking-tight text-[17px] shrink-0">
-          GOKUI<span className="text-violet">.</span>
+      <div className="mx-auto max-w-[1360px] px-4 md:px-6 pt-2 md:pt-0 min-h-14 flex flex-wrap md:flex-nowrap items-center gap-x-3 md:gap-x-4 gap-y-0">
+        <Link href="/" className="brand-wordmark shrink-0" aria-label="ExpertOS home">
+          <span>Expert</span><span className="text-violet">OS</span>
         </Link>
         <nav className="nav-scroll order-3 md:order-none basis-full md:basis-auto w-full md:w-auto min-w-0 flex-none md:flex-1 flex items-center justify-between md:justify-start gap-3 md:gap-5 meta text-[10px] md:text-[11.5px] overflow-x-auto py-2 md:py-4" aria-label={t("nav.primary")}>
           {NAV.map((item) => {
@@ -68,7 +68,7 @@ export function Footer() {
   return (
     <footer className="border-t border-line mt-14">
       <div className="mx-auto max-w-[1360px] px-6 py-5 flex flex-wrap items-center justify-between gap-3 meta text-[10.5px] text-dim">
-        <span>GOKUI © 2026 · {t("footer.marketplace")}</span>
+        <span>ExpertOS © 2026 · {t("footer.marketplace")}</span>
         <nav aria-label={t("footer.legalNavigation")} className="flex flex-wrap items-center gap-4">
           <Link href="/wallet" className="underline decoration-transparent underline-offset-4 hover:text-violet hover:decoration-violet">{t("footer.stack")}</Link>
           <Link href="/privacy" className="underline decoration-transparent underline-offset-4 hover:text-violet hover:decoration-violet">{t("footer.privacy")}</Link>

@@ -36,7 +36,7 @@ app.get("/api/health", (c) => c.json({ ok: true, service: "gokui-marketplace", e
 app.get("/.well-known/agent-skills.json", (c) => {
   const origin = new URL(c.req.url).origin;
   return c.json({
-    name: "GOKUI Agent Skill Marketplace",
+    name: "ExpertOS Agent Skill Marketplace",
     version: "1.0.0",
     protocols: ["REST", "x402-v2"],
     access: {
@@ -55,7 +55,7 @@ app.get("/.well-known/agent-skills.json", (c) => {
     },
     catalog: {
       deliveryTypes: ["paid_api", "external_source"],
-      disclosure: "Paid APIs are called and paid by agents through x402; the website does not connect a wallet. Community-curated source packages provide a guarded AI-install handoff pinned to an upstream version and are not sold by GOKUI.",
+      disclosure: "Paid APIs are called and paid by agents through x402; the website does not connect a wallet. Community-curated source packages provide a guarded AI-install handoff pinned to an upstream version and are not sold by ExpertOS.",
     },
     privacy: "Plaintext paid-call input is not stored. Results are retained for up to 24 hours; request hashes and minimal payment receipts remain for security and reconciliation.",
     safety: "Automated checks reduce risk but are not an endorsement. Review third-party skills and permissions before use.",
@@ -323,7 +323,7 @@ app.post(
     ).bind(c.req.param("slug")).first<SkillRecord>();
     if (!skill) return jsonError(c, 404, "skill_not_found", "No approved skill uses that slug.");
     if (skill.delivery_type !== "paid_api") {
-      return jsonError(c, 409, "source_only_skill", "This community-curated listing is installed from its pinned upstream source; it is not a paid GOKUI endpoint.", {
+      return jsonError(c, 409, "source_only_skill", "This community-curated listing is installed from its pinned upstream source; it is not a paid ExpertOS endpoint.", {
         sourceUrl: skill.source_url,
         sourceCommit: skill.source_commit,
       });

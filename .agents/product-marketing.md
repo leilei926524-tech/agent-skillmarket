@@ -1,18 +1,18 @@
-# GOKUI product marketing context
+# ExpertOS product marketing context
 
-Version: 1.3
+Version: 1.4
 Updated: 2026-07-22
 
 ## What the product is
 
-GOKUI is a marketplace where people publish repeatable professional know-how as agent Skills, and AI agents can discover, pay for, and call those Skills when a task needs them.
+ExpertOS is a marketplace where people publish repeatable professional know-how as agent Skills, and AI agents can discover, pay for, and call those Skills when a task needs them.
 
 The current product has four connected parts:
 
 1. A public Skill store for people to browse.
 2. An AI-assisted publishing flow that turns a professional workflow into `SKILL.md`, then checks and queues it for review.
 3. An Agent API that issues self-revocable keys, returns only relevant Skill matches, and enforces a server-side daily budget before paid calls.
-4. Two delivery paths: GOKUI-hosted paid APIs behind x402 for autonomous agents, and free community-curated packages pinned to reviewed upstream commits with a guarded “copy for AI install” handoff.
+4. Two delivery paths: ExpertOS-hosted paid APIs behind x402 for autonomous agents, and free community-curated packages pinned to reviewed upstream commits with a guarded “copy for AI install” handoff.
 
 ## Target users
 
@@ -53,7 +53,7 @@ Technical reviewers, investors, and early partners who need to see that submissi
 
 告诉 AI 你会怎么做，它帮你整理成 Skill；检查后即可提交发布。
 
-## Why GOKUI is different
+## Why ExpertOS is different
 
 - AI-assisted publishing: the professional starts with a conversation, not a blank `SKILL.md`.
 - Built for both people and agents: people can browse; agents can search and call the same catalog through an API.
@@ -83,7 +83,7 @@ Technical reviewers, investors, and early partners who need to see that submissi
 
 As of 2026-07-22, the production API reports:
 
-- 15 available Skills: 3 GOKUI-hosted paid APIs and 12 free, commit-pinned community source listings.
+- 15 available Skills: 3 ExpertOS-hosted paid APIs and 12 free, commit-pinned community source listings.
 - 1 settled invocation.
 - Base mainnet (`eip155:8453`).
 - A settled 0.01 USDC payment with an onchain transaction hash.
@@ -122,6 +122,7 @@ Technical documentation may still use exact protocol terms such as `HTTP 402`, `
 
 ## Changelog
 
+- 2026-07-22: Version 1.4 restored ExpertOS as the public product brand across navigation, metadata, sharing, policies, and machine-readable discovery while retaining internal compatibility identifiers.
 - 2026-07-22: Version 1.3 made `tryexpertos.com` the verified canonical product and API origin, recorded the deployed privacy and recovery model, and retained the existing settlement as technical-path proof rather than customer traction.
 - 2026-07-22: Version 1.2 fixed the product branches: Agent-only automatic payment, guarded AI installation for free curated Skills, private no-login submission recovery, mixed recommendations, and 24-hour paid-result retention without stored plaintext input.
 - 2026-07-22: Version 1.1 corrected the catalog to 15 Skills, separated paid APIs from pinned source listings, removed the unsupported “continuously updated” promise, and recorded self-revocation, relevant-only recommendations, per-Skill prices, and the daily budget boundary.

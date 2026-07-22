@@ -116,7 +116,7 @@ async function copyText(value: string) {
 }
 
 function aiPrompt(locale: string, language: string) {
-  if (locale === "zh-CN") return `任务：帮我创建一份可提交到 GOKUI 的 Agent 技能文件（SKILL.md）。
+  if (locale === "zh-CN") return `任务：帮我创建一份可提交到 ExpertOS 的 Agent 技能文件（SKILL.md）。
 
 我不了解技术格式。请一次只问我一个简单问题，把我的经验或工作流程整理成一个可复用的 Agent 技能。
 
@@ -144,7 +144,7 @@ metadata:
 
 正文至少包含：适用范围、前置条件、工作流程、输入与输出、安全与限制、失败处理、示例。不要安装或执行这个技能，只负责和我一起完成文件。`;
 
-  return `Task: Help me create an agent skill file (SKILL.md) for submission to GOKUI.
+  return `Task: Help me create an agent skill file (SKILL.md) for submission to ExpertOS.
 
 I do not know the technical format. Interview me with one simple question at a time, then turn my experience or workflow into a reusable agent skill. Conduct the interview and write the skill instructions in ${language}.
 
@@ -313,7 +313,7 @@ export default function SubmitSkill() {
           <p className="mt-3">{t("common.status")}: <span className="chip bg-amber/10 text-amber border border-amber/30">{submissionStatus}</span></p>
           <dl className="grid grid-cols-1 sm:grid-cols-[110px_1fr] gap-y-2 sm:gap-y-3 mt-6 text-sm"><dt className="text-dim">{t("submit.id")}</dt><dd className="mono break-all">{receipt.submission.id}</dd><dt className="text-dim">{t("submit.slug")}</dt><dd className="mono break-all">{receipt.submission.slug}</dd><dt className="text-dim">{t("submit.risk")}</dt><dd>{riskLabel}</dd><dt className="text-dim">{t("submit.warnings")}</dt><dd>{receipt.submission.scan.warnings.length ? receipt.submission.scan.warnings.map((warning) => scanWarningText(warning, locale === "zh-CN")).join(" · ") : t("submit.noWarnings")}</dd>{receipt.submission.scan.reviewReason && <><dt className="text-dim">{locale === "zh-CN" ? "审核说明" : "Review note"}</dt><dd>{receipt.submission.scan.reviewReason}</dd></>}{receipt.submission.updatedAt && <><dt className="text-dim">{locale === "zh-CN" ? "最后更新" : "Last updated"}</dt><dd>{new Date(receipt.submission.updatedAt).toLocaleString(locale)}</dd></>}</dl>
           {recoveryUrl && <div className="mt-6 border-t border-line pt-5"><p className="text-sm font-bold">{locale === "zh-CN" ? "保存这条私密恢复链接" : "Save this private recovery link"}</p><p className="text-xs text-dim leading-relaxed mt-2">{locale === "zh-CN" ? "以后打开它即可查看审核状态，无需登录。链接里含有私密凭证；不要公开、不要贴进群聊或工单。" : "Open it later to check review status without an account. It contains a private token; do not publish it or paste it into shared chats or tickets."}</p><button type="button" className="btn-ink mt-4" onClick={copyRecoveryLink}>{recoveryCopied ? (locale === "zh-CN" ? "已复制恢复链接" : "Recovery link copied") : (locale === "zh-CN" ? "复制私密恢复链接" : "Copy private recovery link")}</button></div>}
-          <p className="text-xs text-dim mt-6">{locale === "zh-CN" ? "服务器只保存恢复凭证的哈希。GOKUI 无法替你找回丢失的原始链接。" : "The server stores only a hash of the recovery token. GOKUI cannot reconstruct a lost original link."}</p>
+          <p className="text-xs text-dim mt-6">{locale === "zh-CN" ? "服务器只保存恢复凭证的哈希。ExpertOS 无法替你找回丢失的原始链接。" : "The server stores only a hash of the recovery token. ExpertOS cannot reconstruct a lost original link."}</p>
           <button type="button" className="btn-outline mt-5" onClick={clearReceipt}>{t("submit.another")}</button>
         </div>
       ) : (

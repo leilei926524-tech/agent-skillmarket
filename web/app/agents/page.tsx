@@ -158,11 +158,11 @@ export default function Agents() {
 curl ${API_ORIGIN}/.well-known/agent-skills.json
 
 # ${t("agents.quickstart.search")}
-curl -H "Authorization: Bearer $GOKUI_API_KEY" \\
+curl -H "Authorization: Bearer $EXPERTOS_API_KEY" \\
   "${API_ORIGIN}/api/v1/agent/skills?q=pricing"
 
 # ${t("agents.quickstart.invoke")}
-curl -i -X POST -H "Authorization: Bearer $GOKUI_API_KEY" \\
+curl -i -X POST -H "Authorization: Bearer $EXPERTOS_API_KEY" \\
   -H "Idempotency-Key: job-unique-001" \\
   -H "Content-Type: application/json" \\
   -d '{"discountPercent":25,"annualContractValueUsd":100000,"termMonths":24,"prepaid":true}' \\

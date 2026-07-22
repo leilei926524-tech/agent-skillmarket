@@ -64,29 +64,39 @@ export class BodyError extends Error {
   }
 }
 
+function withPublicBrand(value: string) {
+  return value.replaceAll("GOKUI Labs", "ExpertOS Labs").replaceAll("GOKUI", "ExpertOS");
+}
+
 export function publicSkill(skill: import("./types").SkillRecord, origin: string) {
-  const publisher = skill.publisher_name === "ExpertOS Labs" ? "GOKUI Labs" : skill.publisher_name;
+  const publisher = withPublicBrand(skill.publisher_name);
   const deliveryType = skill.delivery_type === "paid_api" ? "paid_api" : "external_source";
-  const listingKind = skill.listing_kind || (publisher === "GOKUI Labs" ? "platform" : "publisher");
+  const listingKind = skill.listing_kind || (["GOKUI Labs", "ExpertOS Labs"].includes(skill.publisher_name) ? "platform" : "publisher");
   const invokeUrl = deliveryType === "paid_api" ? `${origin}/api/v1/skills/${skill.slug}/invoke` : null;
   const input = deliveryType === "paid_api" ? skillInputContract(skill) : null;
+  const localizations = parseJson<Record<string, { title?: string; description?: string; category?: string; riskSummary?: string }>>(
+    skill.localizations_json || "{}",
+    {},
+  );
+  for (const localization of Object.values(localizations)) {
+    for (const key of ["title", "description", "category", "riskSummary"] as const) {
+      if (localization[key]) localization[key] = withPublicBrand(localization[key]);
+    }
+  }
   return {
     id: skill.id,
     slug: skill.slug,
-    title: skill.title,
-    description: skill.description,
+    title: withPublicBrand(skill.title),
+    description: withPublicBrand(skill.description),
     category: skill.category,
     tags: parseJson<string[]>(skill.tags_json, []),
     searchAliases: parseJson<string[]>(skill.search_aliases_json || "[]", []),
-    localizations: parseJson<Record<string, { title?: string; description?: string; category?: string; riskSummary?: string }>>(
-      skill.localizations_json || "{}",
-      {},
-    ),
+    localizations,
     version: skill.version,
     license: skill.license,
     publisher,
     price: { amount: skill.price_usd, currency: "USDC", network: "Base" },
-    risk: { level: skill.risk_level, summary: skill.risk_summary },
+    risk: { level: skill.risk_level, summary: withPublicBrand(skill.risk_summary) },
     invokes: skill.invokes,
     invokeUrl,
     inputSchema: input?.schema || null,
@@ -97,7 +107,7 @@ export function publicSkill(skill: import("./types").SkillRecord, origin: string
     },
     provenance: {
       listingKind,
-      curatedBy: listingKind === "curated" ? "GOKUI" : null,
+      curatedBy: listingKind === "curated" ? "ExpertOS" : null,
       publisherVerified: Boolean(skill.publisher_verified),
       source: skill.source_url
         ? {

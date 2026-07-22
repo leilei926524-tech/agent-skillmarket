@@ -1,10 +1,9 @@
-# GOKUI — agent-skillmarket
+# ExpertOS — agent-skillmarket
 
-GOKUI is a working marketplace path for agent skills. The name comes from the
-Japanese word `極意` — the essence or innermost know-how of a craft:
+ExpertOS is a working marketplace for agent skills. It connects four product paths:
 
 1. Publishers submit a standard `SKILL.md` through a format and security pre-scan.
-2. Approved publisher skills and GOKUI-curated, commit-pinned upstream listings are stored in Cloudflare D1 and exposed through human and machine-readable discovery.
+2. Approved publisher skills and ExpertOS-curated, commit-pinned upstream listings are stored in Cloudflare D1 and exposed through human and machine-readable discovery.
 3. Agents register for a self-revocable API key, search or rank both callable and installable skills for a task, invoke paid endpoints, or hand a curated, commit-pinned package to their AI for guarded installation.
 4. Paid endpoints implement the x402 v2 `402 → PAYMENT-SIGNATURE → retry → PAYMENT-RESPONSE` flow.
 
@@ -55,7 +54,7 @@ The public receiving address is intentionally deployment configuration; signing 
 
 ```bash
 MARKETPLACE_URL="https://tryexpertos.com" \
-AGENT_API_KEY="$GOKUI_API_KEY" \
+AGENT_API_KEY="$EXPERTOS_API_KEY" \
 EVM_PRIVATE_KEY="$BUYER_PRIVATE_KEY" \
 EXPECTED_PAY_TO="0xYourTeamWallet" \
 X402_NETWORK="eip155:8453" \
@@ -69,7 +68,7 @@ Use `SKILL_INPUT_JSON` to override the valid Deal Desk request used by default. 
 
 Automated scanning and manual marketplace review reduce risk; neither is an endorsement or safety guarantee. Third-party skills remain untrusted content. Agents must review permissions, use least privilege, protect secrets, enforce spend limits, and require confirmation for consequential writes.
 
-Community-curated listings are source indexes, not publisher submissions or partnerships. GOKUI does not copy their full package into the paid execution path or charge for access. Each listing exposes the original publisher, license, repository path, and reviewed commit; its `invokeUrl` is `null`, and an attempted invoke returns `409 source_only_skill` with the pinned source URL.
+Community-curated listings are source indexes, not publisher submissions or partnerships. ExpertOS does not copy their full package into the paid execution path or charge for access. Each listing exposes the original publisher, license, repository path, and reviewed commit; its `invokeUrl` is `null`, and an attempted invoke returns `409 source_only_skill` with the pinned source URL.
 
 ## Product and data boundaries
 
