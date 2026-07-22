@@ -5,7 +5,7 @@ export const nowIso = () => new Date().toISOString();
 
 export function jsonError(
   c: Context<{ Bindings: Env; Variables: Variables }>,
-  status: 400 | 401 | 403 | 404 | 409 | 413 | 422 | 429 | 500 | 503,
+  status: 400 | 401 | 403 | 404 | 409 | 410 | 413 | 422 | 429 | 500 | 502 | 503,
   code: string,
   message: string,
   details?: unknown,
@@ -25,6 +25,26 @@ export function randomToken(prefix: string) {
 export async function sha256(value: string) {
   const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(value));
   return [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, "0")).join("");
+}
+
+/** Escape user-provided text before interpolating it into HTML (emails, pages). */
+export function escapeHtml(value: string): string {
+  return value
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
+}
+
+/** Only allow http(s) URLs — rejects javascript:, data:, file:, blob:, etc. */
+export function isSafeHttpUrl(value: string): boolean {
+  try {
+    const parsed = new URL(value);
+    return parsed.protocol === "http:" || parsed.protocol === "https:";
+  } catch {
+    return false;
+  }
 }
 
 export function parseJson<T>(value: string, fallback: T): T {
