@@ -11,6 +11,10 @@ export type Env = {
   X402_FACILITATOR_URL: string;
   X402_PRICE_USD: string;
   X402_PAY_TO: `0x${string}`;
+  // Seller payout: platform signs USDC transfers to skill publishers (85/15 split)
+  PLATFORM_PRIVATE_KEY?: `0x${string}`;
+  SELLER_REVENUE_SHARE_BPS?: string; // basis points, default 8500 (85%)
+  RESEND_API_KEY?: string;           // for Task 5 email feature
 };
 
 export type AgentRecord = {
@@ -46,6 +50,8 @@ export type SkillRecord = {
   source_url?: string | null;
   source_commit?: string | null;
   source_path?: string | null;
+  payout_wallet?: string | null;
+  publisher_email?: string | null;
 };
 
 export type Variables = {

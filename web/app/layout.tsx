@@ -50,13 +50,17 @@ export default function RootLayout({
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">
+      <body className="min-h-full">
         <I18nProvider>
           <SkipLink />
-          <ChartPaper />
-          <Nav />
-          <div id="main-content" tabIndex={-1} className="flex-1">{children}</div>
-          <Footer />
+          {/* lg: sidebar + content row; mobile: top bar + content column */}
+          <div className="flex min-h-screen">
+            <Nav />
+            <div className="flex flex-col flex-1 min-w-0">
+              <div id="main-content" tabIndex={-1} className="flex-1">{children}</div>
+              <Footer />
+            </div>
+          </div>
         </I18nProvider>
       </body>
     </html>
