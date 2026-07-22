@@ -4,6 +4,7 @@ import { paymentMiddleware, x402ResourceServer } from "@x402/hono";
 import { createFacilitatorConfig } from "@coinbase/x402";
 import type { AppMiddleware, Env } from "./types";
 import { jsonError, sha256 } from "./utils";
+import { triggerSellerPayout } from "./payout";
 
 const middlewareCache = new Map<string, ReturnType<typeof paymentMiddleware>>();
 
@@ -80,6 +81,11 @@ export const x402Gate: AppMiddleware = async (c, next) => {
     await c.env.DB.prepare(
       "UPDATE invocations SET status = 'settled', tx_hash = ? WHERE id = ?",
     ).bind(txHash, invocationId).run();
+    // Fire seller payout in the background — does not delay buyer response
+    const skill = c.get("skill");
+    if (skill?.payout_wallet && c.env.PLATFORM_PRIVATE_KEY) {
+      c.executionCtx.waitUntil(triggerSellerPayout(c.env, invocationId, skill));
+    }
   } else {
     await c.env.DB.prepare(
       "UPDATE invocations SET status = 'payment_failed' WHERE id = ? AND status = 'executed'",
