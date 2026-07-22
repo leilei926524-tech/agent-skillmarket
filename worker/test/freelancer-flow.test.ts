@@ -11,7 +11,7 @@
  *   matching → offered → accepted → delivered → payment_pending → paid
  *   Failure states: email_failed, payment_failed, expired
  */
-import { describe, test, expect, beforeEach, mock } from "bun:test";
+import { describe, test, expect, beforeEach, afterAll, mock } from "bun:test";
 import { Database } from "bun:sqlite";
 import { readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
@@ -78,6 +78,10 @@ globalThis.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
   if (url.includes("base.org")) throw new Error(`Blocked outbound call in tests: ${url}`);
   return realFetch(input as never, init);
 };
+afterAll(() => {
+  // @ts-expect-error restore overridden global for other test files
+  globalThis.fetch = realFetch;
+});
 
 // ── Test env / helpers ──────────────────────────────────────────────────────
 let sqlite: Database;
@@ -199,6 +203,13 @@ describe("registration and consent", () => {
     expect((await registerFreelancer()).status).toBe(409); // duplicate email
   });
 
+  test("hourlyRateUsd supports explicit zero values", async () => {
+    const res = await registerFreelancer({ email: "zero@example.com", hourlyRateUsd: 0 });
+    expect(res.status).toBe(201);
+    const row = sqlite.prepare("SELECT hourly_rate_usd FROM freelancers WHERE email = ?").get("zero@example.com") as { hourly_rate_usd: string | null };
+    expect(row.hourly_rate_usd).toBe("0.00");
+  });
+
   test("consent defaults to FALSE unless explicitly boolean true", async () => {
     await registerFreelancer({ email: "a@example.com", emailConsent: undefined });
     await registerFreelancer({ email: "b@example.com", emailConsent: "yes" }); // string is NOT consent
@@ -264,6 +275,15 @@ describe("no-skill fallback and matching eligibility", () => {
     expect(res.status).toBe(201);
     expect(sentEmails.length).toBe(1);
     expect(sentEmails[0].body.to).toEqual(["eligible@example.com"]);
+  });
+
+  test("budgetUsd zero is rejected as invalid_budget", async () => {
+    const agentKey = await registerAgent();
+    await registerFreelancer();
+    await verifyFreelancerViaApi("aiko@example.com");
+    const res = await matchTask(agentKey, { budgetUsd: 0 });
+    expect(res.status).toBe(422);
+    expect((await res.json()).error.code).toBe("invalid_budget");
   });
 
   test("best-matching freelancer is selected", async () => {
@@ -378,6 +398,18 @@ describe("offer email safety", () => {
     const { token } = tokenFromLastOfferEmail();
     expect((await json("POST", `/api/v1/tasks/${taskId}/accept`, { token })).status).toBe(200);
   });
+
+  test("legacy offered task missing hash can be retried to reissue secure token", async () => {
+    const { taskId, token: oldToken } = await setupOfferedTask();
+    sqlite.exec(`UPDATE task_requests SET action_token_hash = NULL WHERE id = '${taskId}'`);
+    const retry = await json("POST", `/api/v1/admin/tasks/${taskId}/retry-email`, {}, adminHdr);
+    expect(retry.status).toBe(200);
+    const row = taskRow(taskId);
+    expect(String(row.action_token_hash)).toMatch(/^[a-f0-9]{64}$/);
+    expect((await json("POST", `/api/v1/tasks/${taskId}/accept`, { token: oldToken })).status).toBe(403);
+    const { token: newToken } = tokenFromLastOfferEmail();
+    expect((await json("POST", `/api/v1/tasks/${taskId}/accept`, { token: newToken })).status).toBe(200);
+  });
 });
 
 describe("offer review page and acceptance security", () => {
@@ -418,6 +450,14 @@ describe("offer review page and acceptance security", () => {
     // the offer page also reports 410 afterwards
     expect((await req(`/api/v1/tasks/${taskId}/offer?token=${encodeURIComponent(token)}`)).status).toBe(410);
   });
+
+  test("legacy task without token hash returns 410 and requires secure reissue", async () => {
+    const { taskId, token } = await setupOfferedTask();
+    sqlite.exec(`UPDATE task_requests SET action_token_hash = NULL WHERE id = '${taskId}'`);
+    const accept = await json("POST", `/api/v1/tasks/${taskId}/accept`, { token });
+    expect(accept.status).toBe(410);
+    expect((await accept.json()).error.code).toBe("offer_reissue_required");
+  });
 });
 
 describe("delivery security", () => {
@@ -448,6 +488,14 @@ describe("delivery security", () => {
     const res = await json("POST", `/api/v1/tasks/${taskId}/deliver`, { token, submissionUrl: "https://example.com/w", note: "x".repeat(2001) });
     expect(res.status).toBe(422);
     expect(taskRow(taskId).status).toBe("accepted"); // nothing was recorded
+  });
+
+  test("legacy accepted task without token hash cannot be delivered", async () => {
+    const { taskId, token } = await setupOfferedTask();
+    sqlite.exec(`UPDATE task_requests SET status = 'accepted', action_token_hash = NULL WHERE id = '${taskId}'`);
+    const deliver = await json("POST", `/api/v1/tasks/${taskId}/deliver`, { token, submissionUrl: "https://example.com/work" });
+    expect(deliver.status).toBe(410);
+    expect((await deliver.json()).error.code).toBe("offer_reissue_required");
   });
 });
 

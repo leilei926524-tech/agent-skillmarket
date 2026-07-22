@@ -503,7 +503,10 @@ async function loadTaskWithFreelancer(c: AppContext, id: string) {
 async function checkTaskToken(c: AppContext, task: TaskRequestRecord, provided: string | undefined | null) {
   const token = (provided || "").trim();
   if (!token) return jsonError(c, 403, "token_required", "A task token is required.");
-  if (!task.action_token_hash || await sha256(token) !== task.action_token_hash) {
+  if (!task.action_token_hash) {
+    return jsonError(c, 410, "offer_reissue_required", "This offer link was invalidated. Ask an admin to resend a secure offer email.");
+  }
+  if (await sha256(token) !== task.action_token_hash) {
     return jsonError(c, 403, "invalid_token", "The task token is invalid.");
   }
   return null;
@@ -528,7 +531,9 @@ app.post("/api/v1/freelancers/register", async (c) => {
   const email = String(input.email || "").trim().toLowerCase();
   const bio = String(input.bio || "").trim();
   const skills = Array.isArray(input.skills) ? input.skills.map(String).map((s) => s.trim().toLowerCase()).filter(Boolean).slice(0, 20) : [];
-  const hourlyRate = input.hourlyRateUsd ? String(Number(input.hourlyRateUsd || 0).toFixed(2)) : null;
+  const hourlyRate = input.hourlyRateUsd === null || input.hourlyRateUsd === undefined || String(input.hourlyRateUsd).trim() === ""
+    ? null
+    : String(Number(input.hourlyRateUsd).toFixed(2));
   const payoutWallet = String(input.payoutWallet || "").trim();
   // Consent must be an explicit boolean true — anything else stores false.
   const emailConsent = input.emailConsent === true ? 1 : 0;
@@ -580,7 +585,9 @@ app.post("/api/v1/tasks/match", requireAgent, async (c) => {
   const title = String(input.title || "").trim();
   const description = String(input.description || "").trim();
   const requiredSkills = Array.isArray(input.requiredSkills) ? input.requiredSkills.map(String).map((s) => s.trim().toLowerCase()).filter(Boolean) : [];
-  const budgetUsd = input.budgetUsd ? String(Number(input.budgetUsd).toFixed(2)) : null;
+  const budgetUsd = input.budgetUsd === null || input.budgetUsd === undefined || String(input.budgetUsd).trim() === ""
+    ? null
+    : String(Number(input.budgetUsd).toFixed(2));
   if (!title || title.length > 200) return jsonError(c, 422, "invalid_title", "Title required, max 200 chars.");
   if (description.length < 30 || description.length > 2000) return jsonError(c, 422, "invalid_description", "Description must be 30–2000 chars.");
   if (budgetUsd !== null && (!Number.isFinite(Number(budgetUsd)) || Number(budgetUsd) <= 0 || Number(budgetUsd) > 10_000)) {
@@ -673,17 +680,26 @@ app.post("/api/v1/admin/tasks/:id/retry-email", async (c) => {
   if (!adminAuthorized(c)) return jsonError(c, 403, "admin_required", "A valid X-Admin-Key is required.");
   const task = await loadTaskWithFreelancer(c, c.req.param("id"));
   if (!task) return jsonError(c, 404, "task_not_found", "Task not found.");
-  if (task.status !== "email_failed") {
-    return jsonError(c, 409, "wrong_status", `Only 'email_failed' tasks can retry the offer email; current: '${task.status}'.`);
+  const legacyMissingHash = !task.action_token_hash;
+  const legacyRetryable = legacyMissingHash && task.status === "offered";
+  if (task.status !== "email_failed" && !legacyRetryable) {
+    return jsonError(c, 409, "wrong_status", `Only 'email_failed' tasks can retry the offer email (or legacy 'offered' tasks missing a token hash); current: '${task.status}'.`);
   }
   const sent = await c.env.DB.prepare(
     "SELECT COUNT(*) AS count FROM email_log WHERE task_request_id = ? AND template = 'offer' AND status = 'sent'",
   ).bind(task.id).first<{ count: number }>();
-  if ((sent?.count || 0) > 0) return jsonError(c, 409, "already_sent", "An offer email was already sent for this task.");
+  if (!legacyMissingHash && (sent?.count || 0) > 0) {
+    return jsonError(c, 409, "already_sent", "An offer email was already sent for this task.");
+  }
   const attempts = await c.env.DB.prepare(
     "SELECT COUNT(*) AS count FROM email_log WHERE task_request_id = ? AND template = 'offer'",
   ).bind(task.id).first<{ count: number }>();
   const attempt = (attempts?.count || 0) + 1;
+  if (legacyMissingHash) {
+    await c.env.DB.prepare(
+      "UPDATE email_log SET status = 'superseded' WHERE task_request_id = ? AND template = 'offer' AND status = 'sent'",
+    ).bind(task.id).run();
+  }
   const actionToken = randomToken("task");
   await c.env.DB.prepare("UPDATE task_requests SET action_token_hash = ?, updated_at = ? WHERE id = ?")
     .bind(await sha256(actionToken), nowIso(), task.id).run();
