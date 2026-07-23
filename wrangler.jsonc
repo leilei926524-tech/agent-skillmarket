@@ -29,7 +29,7 @@
     {
       "binding": "DB",
       "database_name": "expertos-marketplace",
-      "database_id": "a45ae485-f057-40d3-8916-80acc3e96c43",
+      "database_id": "a0fa7760-334b-4efb-a7cf-8dbd48d574e3",
       "migrations_dir": "worker/migrations"
     }
   ],
