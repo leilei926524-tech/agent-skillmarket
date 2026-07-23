@@ -6,12 +6,7 @@
   "compatibility_flags": ["nodejs_compat"],
   "workers_dev": true,
   "preview_urls": false,
-  "routes": [
-    {
-      "pattern": "gokui.mesalaunch.com",
-      "custom_domain": true
-    }
-  ],
+  "routes": [],
   "assets": {
     "directory": "./web/out",
     "binding": "ASSETS",
